@@ -12,7 +12,7 @@ package kotlin.text
  * Sets the character at the specified [index] to the specified [value].
  */
 @kotlin.internal.InlineOnly
-public inline operator fun StringBuilder.set(index: Int, value: Char): Unit = this.setCharAt(index, value)
+public actual inline operator fun StringBuilder.set(index: Int, value: Char): Unit = this.setCharAt(index, value)
 
 /**
  * Clears the content of this string builder making it empty.
@@ -21,6 +21,17 @@ public inline operator fun StringBuilder.set(index: Int, value: Char): Unit = th
  */
 @SinceKotlin("1.3")
 public actual fun StringBuilder.clear(): StringBuilder = apply { setLength(0) }
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.codePoint(index: Int): Int = this.codePointAt(index)
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.delete(index: Int): StringBuilder = this.deleteCharAt(index)
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =
+    this.getChars(startIndex, endIndex, destination, destinationOffset)
+
 
 private object SystemProperties {
     /** Line separator for current system. */
