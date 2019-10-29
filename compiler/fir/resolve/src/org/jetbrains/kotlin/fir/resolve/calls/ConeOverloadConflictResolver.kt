@@ -7,6 +7,8 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
+import org.jetbrains.kotlin.fir.symbols.impl.FirAccessorSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirFieldSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.arrayElementType
@@ -121,7 +123,11 @@ class ConeOverloadConflictResolver(
         discriminateGenerics: Boolean//,
         //isDebuggerContext: Boolean
     ): Candidate? {
-        val filteredCandidates = candidates//uniquifyCandidatesSet(candidates)
+        val filteredCandidates = candidates.filter { candidate ->
+            candidate.symbol !is FirFieldSymbol || candidates.none { other ->
+                other.symbol is FirAccessorSymbol && other.symbol.callableId == candidate.symbol.callableId
+            }
+        } //uniquifyCandidatesSet(candidates)
 
         if (filteredCandidates.size <= 1) return filteredCandidates.singleOrNull()
 
