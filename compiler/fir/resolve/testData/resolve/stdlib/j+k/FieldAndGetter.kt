@@ -11,5 +11,5 @@ public class JavaClass {
 // FILE: test.kt
 
 fun test(jc: JavaClass) {
-    jc.<!AMBIGUITY!>field<!>
+    jc.field
 }
