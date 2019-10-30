@@ -47,7 +47,22 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
     }
 
     actual fun reverse(): StringBuilder {
-        string = string.asDynamic().split("").reverse().join("")
+        var reversed = ""
+        var index = string.length - 1
+        while (index >= 0) {
+            val low = string[index--]
+            if (low.isLowSurrogate() && index >= 0) {
+                val high = string[index--]
+                if (high.isHighSurrogate()) {
+                    reversed = reversed + high + low
+                } else {
+                    reversed = reversed + low + high
+                }
+            } else {
+                reversed += low
+            }
+        }
+        string = reversed
         return this
     }
 

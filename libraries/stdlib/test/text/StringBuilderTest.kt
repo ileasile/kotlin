@@ -90,6 +90,22 @@ class StringBuilderTest {
         assertFailsWith<IndexOutOfBoundsException> { assertEquals('t', sb[4]) }
     }
 
+    @Test
+    fun reverse() {
+        StringBuilder("my reverse test").let { sb ->
+            sb.reverse()
+            assertEquals("tset esrever ym", sb.toString())
+
+            sb.append('\uD800')
+            sb.append('\uDC00')
+
+            sb.insert(10, "\uDC01\uD801")
+            sb.insert(0, "\uD802\uDC02")
+
+            sb.reverse()
+            assertEquals("\uD800\uDC00my re\uD801\uDC01verse test\uD802\uDC02", sb.toString())
+        }
+    }
 
     @Test
     fun appendChar() {
