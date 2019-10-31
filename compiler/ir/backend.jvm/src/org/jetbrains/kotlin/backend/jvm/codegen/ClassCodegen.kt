@@ -411,9 +411,10 @@ open class ClassCodegen protected constructor(
         // or constructor, the name and type of the function is recorded as well.
         if (parentClassCodegen != null) {
             val outerClassName = parentClassCodegen.type.internalName
+            val enclosingFunction = context.customEnclosingFunction[irClass.attributeOwnerId] ?: parentFunction
             // TODO: LocalDeclarationsLowering could have moved this class out of its enclosing method.
-            if (parentFunction != null) {
-                val method = methodSignatureMapper.mapAsmMethod(parentFunction)
+            if (enclosingFunction != null) {
+                val method = methodSignatureMapper.mapAsmMethod(enclosingFunction)
                 visitor.visitOuterClass(outerClassName, method.name, method.descriptor)
             } else if (irClass.isAnonymousObject) {
                 visitor.visitOuterClass(outerClassName, null, null)
