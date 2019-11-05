@@ -132,58 +132,6 @@ expect class StringBuilder : Appendable, CharSequence {
     fun append(string: String): StringBuilder
 
     /**
-     * Appends the string representation of the specified [codePoint] to this string builder.
-     *
-     * @param codePoint the Unicode code point to append.
-     *
-     * @throws IllegalArgumentException if [codePoint] is not a valid Unicode code point value.
-     *
-     * @return this string builder.
-     */
-    fun appendCodePoint(codePoint: Int): StringBuilder
-
-    /**
-     * Returns the Unicode code point before the specified [index].
-     *
-     * If the Char value at `index - 1` is in the low-surrogate range,
-     * `index - 2` is not negative, and the Char value at `index - 2` is in the high-surrogate range,
-     * then the supplementary code point corresponding to this surrogate pair is returned.
-     * Otherwise, the Char value at `index - 1` is returned.
-     *
-     * @throws IndexOutOfBoundsException if [index] is less then one or greater then the length of this string builder.
-     */
-    fun codePointBefore(index: Int): Int
-
-    /**
-     * Returns the number of Unicode code points in the specified range of this string builder.
-     *
-     * Unpaired surrogates within the specified range count as one code point each.
-     *
-     * @param [startIndex] the beginning (inclusive) of the range to count code points in.
-     * @param [endIndex] the end (exclusive) of the range to count code points in.
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of this array indices or when `startIndex > endIndex`.
-     */
-    fun codePointCount(startIndex: Int, endIndex: Int): Int
-
-    /**
-     * Returns the index within this sequence that is offset from the given [index] by [codePointOffset] code points.
-     *
-     * The specified [codePointOffset] can be negative that means the returned index is offset from the given [index]
-     * towards the beginning of this string builder by the absolute value of [codePointOffset].
-     *
-     * Unpaired surrogates within the text range given by [index] and [codePointOffset] count as one code point each.
-     *
-     * @param index the index to be offset
-     * @param codePointOffset the offset in code points
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] if index is negative or larger then the length of this sequence,
-     *  or if [codePointOffset] is positive and the subsequence starting with [index] has fewer than [codePointOffset] code points,
-     *  or if [codePointOffset] is negative and the subsequence before [index] has fewer than the absolute value of [codePointOffset] code points.
-     */
-    fun offsetByCodePoints(index: Int, codePointOffset: Int): Int
-
-    /**
      * Removes characters in the specified range from this string builder.
      *
      * @param startIndex the beginning (inclusive) of the range to remove.
@@ -403,17 +351,6 @@ public expect fun StringBuilder.clear(): StringBuilder
  * @throws IndexOutOfBoundsException if [index] is less than zero or greater than or equal to the length of this string builder.
  */
 public expect operator fun StringBuilder.set(index: Int, value: Char)
-
-/**
- * Returns the Unicode code point at the specified [index].
- *
- * If the Char value at the specified [index] is in the high-surrogate range, the following index is less than the length of this string builder,
- * and the Char value at the following index is in the low-surrogate range, then the supplementary code point corresponding to this surrogate pair is returned.
- * Otherwise, the Char value at the given [index] is returned.
- *
- * @throws IndexOutOfBoundsException if [index] is negative or not less than the length of this string builder.
- */
-public expect fun StringBuilder.codePoint(index: Int): Int
 
 /**
  * Removes the character at the specified [index] from this string builder.

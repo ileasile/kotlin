@@ -91,102 +91,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
-    actual fun appendCodePoint(codePoint: Int): StringBuilder {
-        if (codePoint < 0 || codePoint > 0x10FFFF) {
-            throw IllegalArgumentException("Invalid Unicode code point value: $codePoint")
-        }
-        string += js("String.fromCodePoint(codePoint)")
-        return this
-    }
-
-    actual fun codePointBefore(index: Int): Int {
-        if (index < 1 || index > length) {
-            val message = if (isEmpty()) "StringBuilder is empty." else "Index must be in 1..$length, provided index: $index"
-            throw IndexOutOfBoundsException(message)
-        }
-
-        val low = string[index - 1]
-        if (low.isLowSurrogate() && index > 1) {
-            val high = string[index - 2]
-            if (high.isHighSurrogate()) {
-                return 0x10000 + ((high.toInt() and 0x3FF) shl 10) or (low.toInt() and 0x3FF)
-            }
-        }
-        return low.toInt()
-    }
-
-    actual fun codePointCount(startIndex: Int, endIndex: Int): Int {
-        AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
-
-        var count = 0
-        var wasHighSurrogate = false
-
-        for (i in startIndex until endIndex) {
-            val char = string[i]
-            if (char.isLowSurrogate() && wasHighSurrogate) {
-                wasHighSurrogate = false
-            } else {
-                count++
-                wasHighSurrogate = char.isHighSurrogate()
-            }
-        }
-
-        return count
-    }
-
-    actual fun offsetByCodePoints(index: Int, codePointOffset: Int): Int {
-        AbstractList.checkPositionIndex(index, length)
-
-        if (codePointOffset == 0) return index
-
-        if (codePointOffset > 0) {
-            var count = 0
-            var wasHighSurrogate = false
-
-            for (i in index until length) {
-                val char = string[i]
-                if (char.isLowSurrogate() && wasHighSurrogate) {
-                    wasHighSurrogate = false
-                } else {
-                    count++
-                    wasHighSurrogate = char.isHighSurrogate()
-
-                    if (count == codePointOffset) {
-                        if (wasHighSurrogate && i + 1 < length && string[i + 1].isLowSurrogate()) {
-                            return i + 2
-                        }
-                        return i + 1
-                    }
-                }
-            }
-
-            throw IllegalArgumentException("Where are fewer code points at $index..${length - 1} than the provided codePointOffset: $codePointOffset")
-
-        } else {
-            var count = 0
-            var wasLowSurrogate = false
-
-            for (i in index - 1 downTo 0) {
-                val char = string[i]
-                if (char.isHighSurrogate() && wasLowSurrogate) {
-                    wasLowSurrogate = false
-                } else {
-                    count++
-                    wasLowSurrogate = char.isLowSurrogate()
-
-                    if (count == -codePointOffset) {
-                        if (wasLowSurrogate && i > 0 && string[i - 1].isHighSurrogate()) {
-                            return i - 1
-                        }
-                        return i
-                    }
-                }
-            }
-
-            throw IllegalArgumentException("Where are fewer code points at 0..${index - 1} than the provided codePointOffset: $codePointOffset")
-        }
-    }
-
     actual fun delete(startIndex: Int, endIndex: Int): StringBuilder {
         if (startIndex < 0 || startIndex > length) {
             throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
@@ -338,21 +242,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         string = string.substring(0, index) + value + string.substring(index + 1)
     }
 
-    public fun codePoint(index: Int): Int {
-        AbstractList.checkElementIndex(index, length)
-
-        val high = string[index]
-
-        if (high.isHighSurrogate() && index < length - 1) {
-            val low = string[index + 1]
-            if (low.isLowSurrogate()) {
-                return 0x10000 + ((high.toInt() and 0x3FF) shl 10) or (low.toInt() and 0x3FF)
-            }
-        }
-
-        return high.toInt()
-    }
-
     public fun delete(index: Int): StringBuilder {
         AbstractList.checkElementIndex(index, length)
 
@@ -389,9 +278,6 @@ public actual inline fun StringBuilder.clear(): StringBuilder = this.clear()
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline operator fun StringBuilder.set(index: Int, value: Char) = this.set(index, value)
-
-@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
-public actual inline fun StringBuilder.codePoint(index: Int): Int = this.codePoint(index)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.delete(index: Int): StringBuilder = this.delete(index)
