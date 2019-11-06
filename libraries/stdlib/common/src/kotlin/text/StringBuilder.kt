@@ -31,12 +31,12 @@ expect interface Appendable {
     /**
      * Appends a subsequence of the specified character sequence [csq] to this Appendable.
      *
-     * @param csq the character sequence from which a subsequence will be appended. If [csq] is `null`,
-     *  then characters will be appended as if [csq] contained the four characters `"null"`.
+     * @param csq the character sequence from which a subsequence is appended. If [csq] is `null`,
+     *  then characters are appended as if [csq] contained the four characters `"null"`.
      * @param start the beginning (inclusive) of the subsequence to append.
      * @param end the end (exclusive) of the subsequence to append.
      *
-     * @throws IndexOutOfBoundsException if [start] is less than zero, [start] is greater than [end], or [end] is greater than the size of this Appendable.
+     * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [start] is negative, [end] is greater than the length of this Appendable, or `start > end`.
      *
      * @return this Appendable.
      */
@@ -45,6 +45,8 @@ expect interface Appendable {
 
 /**
  * A mutable sequence of characters.
+ *
+ * String builder can be used to efficiently perform multiple string manipulation operations.
  */
 expect class StringBuilder : Appendable, CharSequence {
     /** Constructs an empty string builder. */
@@ -53,10 +55,10 @@ expect class StringBuilder : Appendable, CharSequence {
     /** Constructs an empty string builder with the specified initial [capacity]. */
     constructor(capacity: Int)
 
-    /** Constructs a string builder that contains the same characters as the specified [CharSequence]. */
+    /** Constructs a string builder that contains the same characters as the specified [content] char sequence. */
     constructor(content: CharSequence)
 
-    /** Constructs a string builder that contains the same characters as the specified [String]. */
+    /** Constructs a string builder that contains the same characters as the specified [content] string. */
     constructor(content: String)
 
     override val length: Int
@@ -72,10 +74,10 @@ expect class StringBuilder : Appendable, CharSequence {
     /**
      * Reverses the contents of this string builder.
      *
-     * If there are any surrogate pairs included in the string builder, these are treated as single characters for the reverse operation.
-     * Thus, the order of the high-low surrogates is never reversed.
+     * Surrogate pairs included in this string builder are treated as single characters.
+     * Therefore, the order of the high-low surrogates is never reversed.
      *
-     * Note that the reverse operation may result in producing surrogate pairs that were unpaired low-surrogates and high-surrogates before the operation.
+     * Note that the reverse operation may produce new surrogate pairs that were unpaired low-surrogates and high-surrogates before the operation.
      * For example, reversing `"\uDC00\uD800"` produces `"\uD800\uDC00"` which is a valid surrogate pair.
      *
      * @return this string builder.
@@ -83,10 +85,10 @@ expect class StringBuilder : Appendable, CharSequence {
     fun reverse(): StringBuilder
 
     /**
-     * Appends the string representation of the specified object [obj].
+     * Appends the string representation of the specified [obj] object to this string builder.
      *
-     * The overall effect is exactly as if the argument were converted to a string by the method `obj.toString()`,
-     * and the characters of that string were then appended to this string builder.
+     * The overall effect is exactly as if the [obj] were converted to a string by the `obj.toString()` method,
+     * and then that string was appended to this string builder.
      *
      * @return this string builder.
      */
@@ -95,12 +97,15 @@ expect class StringBuilder : Appendable, CharSequence {
     /**
      * Appends the string representation of the specified [boolean] to this string builder.
      *
+     * The overall effect is exactly as if the [boolean] were converted to a string by the `boolean.toString()` method,
+     * and then that string was appended to this string builder.
+     *
      * @return this string builder.
      */
     fun append(boolean: Boolean): StringBuilder
 
     /**
-     * Appends characters in the specified [chars] array to the contents of this string builder.
+     * Appends characters in the specified [chars] array to this string builder.
      *
      * Characters are appended in order, starting at `0`.
      *
@@ -109,11 +114,11 @@ expect class StringBuilder : Appendable, CharSequence {
     fun append(chars: CharArray): StringBuilder
 
     /**
-     * Appends characters in a subarray of the specified [chars] array to the contents of this string builder.
+     * Appends characters in a subarray of the specified [chars] array to this string builder.
      *
      * Characters are appended in order, starting at specified [offset].
      *
-     * @param chars the array from which characters will be appended.
+     * @param chars the array from which characters are appended.
      * @param offset the beginning (inclusive) of the subarray to append.
      * @param length the length of the subarray to append.
      *
@@ -146,22 +151,22 @@ expect class StringBuilder : Appendable, CharSequence {
     /**
      * Returns the current capacity of this string builder.
      *
-     * The capacity is the amount of storage available for newly inserted characters, beyond which an allocation will occur.
+     * The capacity is the maximum length this string builder can have before an allocation occurs.
      */
     fun capacity(): Int
 
     /**
-     * Ensures that the capacity is at least equal to the specified [minimumCapacity].
+     * Ensures that the capacity of this string builder is at least equal to the specified [minimumCapacity].
      *
-     * If the current capacity is less than the [minimumCapacity], then a new internal buffer is allocated with greater capacity.
-     * If the [minimumCapacity] is nonpositive, this method takes no action and simply returns.
+     * If the current capacity is less than the [minimumCapacity], a new backing storage is allocated with greater capacity.
+     * Otherwise, this method takes no action and simply returns.
      */
     fun ensureCapacity(minimumCapacity: Int)
 
     /**
      * Returns the index within this string builder of the first occurrence of the specified [string].
      *
-     * If the specified [string] does not occur in this string builder, `-1` is returned.
+     * Returns `-1` if the specified [string] does not occur in this string builder.
      */
     fun indexOf(string: String): Int
 
@@ -169,15 +174,15 @@ expect class StringBuilder : Appendable, CharSequence {
      * Returns the index within this string builder of the first occurrence of the specified [string],
      * starting at the specified [startIndex].
      *
-     * If the specified [string] does not occur in this string builder starting at the specified [startIndex], `-1` is returned.
+     * Returns `-1` if the specified [string] does not occur in this string builder starting at the specified [startIndex].
      */
     fun indexOf(string: String, startIndex: Int): Int
 
     /**
      * Returns the index within this string builder of the last occurrence of the specified [string].
-     * The rightmost empty string `""` is considered to occur at the index equal to `this.length`.
+     * The last occurrence of empty string `""` is considered to be at the index equal to `this.length`.
      *
-     * If the specified [string] does not occur in this string builder, `-1` is returned.
+     * Returns `-1` if the specified [string] does not occur in this string builder.
      */
     fun lastIndexOf(string: String): Int
 
@@ -185,12 +190,15 @@ expect class StringBuilder : Appendable, CharSequence {
      * Returns the index within this string builder of the last occurrence of the specified [string],
      * starting from the specified [startIndex] toward the beginning.
      *
-     * If the specified [string] does not occur in this string builder starting at the specified [startIndex], `-1` is returned.
+     * Returns `-1` if the specified [string] does not occur in this string builder starting at the specified [startIndex].
      */
     fun lastIndexOf(string: String, startIndex: Int): Int
 
     /**
      * Inserts the string representation of the specified [boolean] into this string builder at the specified [index].
+     *
+     * The overall effect is exactly as if the [boolean] were converted to a string by the `boolean.toString()` method,
+     * and then that string was inserted into this string builder at the specified [index].
      *
      * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
      *
@@ -224,7 +232,7 @@ expect class StringBuilder : Appendable, CharSequence {
      * The inserted characters go in same order as in the [chars] array, starting at [index].
      *
      * @param index the position in this string builder to insert at.
-     * @param chars the array from which characters will be inserted.
+     * @param chars the array from which characters are inserted.
      * @param offset the beginning (inclusive) of the subarray to insert.
      * @param length the length of the subarray to insert.
      *
@@ -242,7 +250,7 @@ expect class StringBuilder : Appendable, CharSequence {
      * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
      *
      * @param index the position in this string builder to insert at.
-     * @param csq the character sequence from which characters will be inserted. If [csq] is `null`, then the four characters `"null"` are inserted.
+     * @param csq the character sequence from which characters are inserted. If [csq] is `null`, then the four characters `"null"` are inserted.
      *
      * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
      *
@@ -256,10 +264,10 @@ expect class StringBuilder : Appendable, CharSequence {
      * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
      *
      * @param index the position in this string builder to insert at.
-     * @param csq the character sequence from which a subsequence will be inserted. If [csq] is `null`,
+     * @param csq the character sequence from which a subsequence is inserted. If [csq] is `null`,
      *  then characters will be inserted as if [csq] contained the four characters `"null"`.
-     * @param startIndex the beginning (inclusive) of the subsequence to append.
-     * @param endIndex the end (exclusive) of the subsequence to append.
+     * @param startIndex the beginning (inclusive) of the subsequence to insert.
+     * @param endIndex the end (exclusive) of the subsequence to insert.
      *
      * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [csq] character sequence indices or when `startIndex > endIndex`.
      * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
@@ -269,10 +277,10 @@ expect class StringBuilder : Appendable, CharSequence {
     fun insert(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder
 
     /**
-     * Inserts the string representation of the specified object [obj] into this string builder at the specified [index].
+     * Inserts the string representation of the specified [obj] object into this string builder at the specified [index].
      *
-     * The overall effect is exactly as if the [obj] were converted to a string by the method `obj.toString()`,
-     * and the characters of that string were then inserted into this string builder at the specified [index].
+     * The overall effect is exactly as if the [obj] were converted to a string by the `obj.toString()` method,
+     * and then that string was inserted into this string builder at the specified [index].
      *
      * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
      *
@@ -303,9 +311,9 @@ expect class StringBuilder : Appendable, CharSequence {
     fun replace(startIndex: Int, endIndex: Int, string: String): StringBuilder
 
     /**
-     *  Sets the length of this string builder.
+     *  Sets the length of this string builder to the specified [newLength].
      *
-     *  If the [newLength] is less than the current length, the length is changed to the specified length.
+     *  If the [newLength] is less than the current length, it is changed to the specified [newLength].
      *  Otherwise, null characters '\u0000' are appended to this string builder until its length is less than the [newLength].
      *
      *  @throws IndexOutOfBoundsException or [IllegalArgumentException] if [newLength] is less than zero.
@@ -329,7 +337,7 @@ expect class StringBuilder : Appendable, CharSequence {
     /**
      * Attempts to reduce storage used for this string builder.
      *
-     * If the backing storage of this string builder is larger than necessary to hold its current sequence of characters,
+     * If the backing storage of this string builder is larger than necessary to hold its current contents,
      * then it may be resized to become more space efficient.
      * Calling this method may, but is not required to, affect the value of the [capacity] property.
      */
@@ -348,18 +356,18 @@ public expect fun StringBuilder.clear(): StringBuilder
 /**
  * Sets the character at the specified [index] to the specified [value].
  *
- * @throws IndexOutOfBoundsException if [index] is less than zero or greater than or equal to the length of this string builder.
+ * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
  */
 public expect operator fun StringBuilder.set(index: Int, value: Char)
 
 /**
  * Removes the character at the specified [index] from this string builder.
  *
- * If the `Char` at the specified index is part of a supplementary code point, this method does not remove the entire supplementary character.
+ * If the `Char` at the specified [index] is part of a supplementary code point, this method does not remove the entire supplementary character.
  *
  * @param index the index of `Char` to remove.
  *
- * @throws IndexOutOfBoundsException if [index] is negative or greater than or equal to the length of this string builder.
+ * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
  *
  * @return this string builder.
  */
