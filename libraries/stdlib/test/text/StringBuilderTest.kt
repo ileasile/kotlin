@@ -234,6 +234,10 @@ class StringBuilderTest {
     fun capacityTest() {
         assertEquals(100, StringBuilder(100).capacity())
 
+        StringBuilder("string builder from string capacity test").let { sb ->
+            assertTrue(sb.capacity() >= sb.length)
+        }
+
         StringBuilder().let { sb ->
             assertTrue(sb.capacity() >= sb.length)
             repeat(Random.nextInt(17, 30)) { sb.append('c') }

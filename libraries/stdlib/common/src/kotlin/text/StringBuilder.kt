@@ -5,9 +5,6 @@
 
 package kotlin.text
 
-import kotlin.jvm.JvmName
-import kotlin.jvm.JvmOverloads
-
 /**
  * An object to which char sequences and values can be appended.
  */
