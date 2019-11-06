@@ -394,6 +394,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localTypes.kt");
         }
 
+        @TestMetadata("localWithBooleanNot.kt")
+        public void testLocalWithBooleanNot() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localWithBooleanNot.kt");
+        }
+
         @TestMetadata("memberExtension.kt")
         public void testMemberExtension() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/memberExtension.kt");
