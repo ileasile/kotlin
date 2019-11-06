@@ -1,0 +1,13 @@
+FILE: emptyArray.kt
+    public final val x: R|kotlin/Array<kotlin/String>| = <Ambiguity: emptyArray, [kotlin/emptyArray, kotlin/emptyArray]>#()
+        public get(): R|kotlin/Array<kotlin/String>|
+    public final val y: R|kotlin/Array<kotlin/String>|
+        public get(): R|kotlin/Array<kotlin/String>| {
+            ^ <Ambiguity: emptyArray, [kotlin/emptyArray, kotlin/emptyArray]>#()
+        }
+    public abstract interface My : R|kotlin/Any| {
+    }
+    public final val z: R|kotlin/Array<out My>|
+        public get(): R|kotlin/Array<out My>| {
+            ^ <Ambiguity: emptyArray, [kotlin/emptyArray, kotlin/emptyArray]>#()
+        }
