@@ -242,7 +242,7 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         string = string.substring(0, index) + value + string.substring(index + 1)
     }
 
-    public fun delete(index: Int): StringBuilder {
+    public fun deleteAt(index: Int): StringBuilder {
         AbstractList.checkElementIndex(index, length)
 
         string = string.substring(0, index) + string.substring(index + 1)
@@ -280,7 +280,7 @@ public actual inline fun StringBuilder.clear(): StringBuilder = this.clear()
 public actual inline operator fun StringBuilder.set(index: Int, value: Char) = this.set(index, value)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
-public actual inline fun StringBuilder.delete(index: Int): StringBuilder = this.delete(index)
+public actual inline fun StringBuilder.deleteAt(index: Int): StringBuilder = this.deleteAt(index)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =

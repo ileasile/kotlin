@@ -199,15 +199,15 @@ class StringBuilderTest {
     @Test
     fun deleteChar() {
         StringBuilder("my delete test").let { sb ->
-            sb.delete(0)
+            sb.deleteAt(0)
             assertEquals("y delete test", sb.toString())
-            sb.delete(5)
+            sb.deleteAt(5)
             assertEquals("y delte test", sb.toString())
-            sb.delete(11)
+            sb.deleteAt(11)
             assertEquals("y delte tes", sb.toString())
 
-            assertFailsWith<IndexOutOfBoundsException> { sb.delete(11) }
-            assertFailsWith<IndexOutOfBoundsException> { sb.delete(-1) }
+            assertFailsWith<IndexOutOfBoundsException> { sb.deleteAt(11) }
+            assertFailsWith<IndexOutOfBoundsException> { sb.deleteAt(-1) }
         }
     }
 

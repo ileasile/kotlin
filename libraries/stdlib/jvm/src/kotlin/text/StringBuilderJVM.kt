@@ -23,7 +23,7 @@ public actual inline operator fun StringBuilder.set(index: Int, value: Char): Un
 public actual fun StringBuilder.clear(): StringBuilder = apply { setLength(0) }
 
 @kotlin.internal.InlineOnly
-public actual inline fun StringBuilder.delete(index: Int): StringBuilder = this.deleteCharAt(index)
+public actual inline fun StringBuilder.deleteAt(index: Int): StringBuilder = this.deleteCharAt(index)
 
 @kotlin.internal.InlineOnly
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =

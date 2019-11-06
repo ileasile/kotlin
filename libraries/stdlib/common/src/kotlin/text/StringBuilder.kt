@@ -371,7 +371,7 @@ public expect operator fun StringBuilder.set(index: Int, value: Char)
  *
  * @return this string builder.
  */
-public expect fun StringBuilder.delete(index: Int): StringBuilder
+public expect fun StringBuilder.deleteAt(index: Int): StringBuilder
 
 /**
  * Copies characters from this string builder into the [destination] character array.
