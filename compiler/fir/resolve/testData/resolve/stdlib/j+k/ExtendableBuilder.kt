@@ -1,22 +1,22 @@
-// FILE: ExtendableBuilder.java
+// FILE: GeneratedMessageLite.java
 
-public abstract class ExtendableBuilder<MessageType extends ExtendableMessage<MessageType>, BuilderType extends ExtendableBuilder<MessageType, BuilderType>>
+public class GeneratedMessageLite {
+    public abstract static class ExtendableBuilder<MessageType extends ExtendableMessage<MessageType>, BuilderType extends ExtendableBuilder<MessageType, BuilderType>>
         extends Builder<MessageType, BuilderType>
         implements ExtendableMessageOrBuilder<MessageType>
-{
-    public final <Type> Type getExtension(GeneratedExtension<MessageType, Type> extension) {}
-}
+    {
+        public final <Type> Type getExtension(final GeneratedExtension<MessageType, Type> extension) {}
+    }
 
-// FILE: ExtendableMessage.java
+    public abstract static class ExtendableMessage<MessageType extends ExtendableMessage<MessageType>> implements ExtendableMessageOrBuilder<MessageType>
+    {
+        public final <Type> Type getExtension(final GeneratedExtension<MessageType, Type> extension) {}
+    }
 
-public abstract class ExtendableMessage<MessageType extends ExtendableMessage<MessageType>> implements ExtendableMessageOrBuilder<MessageType> {
-    public final <Type> Type getExtension(GeneratedExtension<MessageType, Type> extension) {}
-}
-
-// FILE: ExtendableMessageOrBuilder.java
-
-public interface ExtendableMessageOrBuilder<MessageType extends ExtendableMessage> extends MessageLiteOrBuilder {
-    <Type> Type getExtension(GeneratedMessageLite.GeneratedExtension<MessageType, Type> var1) {}
+    public interface ExtendableMessageOrBuilder<MessageType extends ExtendableMessage> extends MessageLiteOrBuilder
+    {
+        <Type> Type getExtension (GeneratedMessageLite.GeneratedExtension<MessageType, Type> var1) {}
+    }
 }
 
 // FILE: GeneratedExtension.java
@@ -33,6 +33,6 @@ public interface MessageLiteOrBuilder {}
 
 // FILE: test.kt
 
-fun <M : ExtendableMessage<M>, T> ExtendableMessage<M>.getExtensionOrNull(
+fun <M : GeneratedMessageLite.ExtendableMessage<M>, T> GeneratedMessageLite.ExtendableMessage<M>.getExtensionOrNull(
     extension: GeneratedExtension<M, T>
 ): T? = getExtension(extension)
