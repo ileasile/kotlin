@@ -6,13 +6,20 @@
 package kotlinx.metadata.impl
 
 import kotlinx.metadata.*
+import kotlinx.metadata.impl.extensions.MetadataExtensions
 import kotlinx.metadata.impl.extensions.applySingleExtension
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.VersionRequirement
 import org.jetbrains.kotlin.metadata.serialization.MutableVersionRequirementTable
 import org.jetbrains.kotlin.metadata.serialization.StringTable
 
-class WriteContext(val strings: StringTable) {
+/**
+ * Allows to populate [WriteContext] with additional data
+ * that can be used when writing metadata in [MetadataExtensions].
+ */
+interface WriteContextExtension
+
+open class WriteContext(val strings: StringTable, val contextExtensions: List<WriteContextExtension> = emptyList()) {
     val versionRequirements: MutableVersionRequirementTable = MutableVersionRequirementTable()
 
     operator fun get(string: String): Int =
@@ -393,9 +400,9 @@ private fun writeEffectExpression(c: WriteContext, output: (ProtoBuf.Expression.
         }
     }
 
-open class ClassWriter(stringTable: StringTable) : KmClassVisitor() {
+open class ClassWriter(stringTable: StringTable, contextExtensions: List<WriteContextExtension> = emptyList()) : KmClassVisitor() {
     protected val t = ProtoBuf.Class.newBuilder()!!
-    protected val c = WriteContext(stringTable)
+    protected val c: WriteContext = WriteContext(stringTable, contextExtensions)
 
     override fun visit(flags: Flags, name: ClassName) {
         if (flags != ProtoBuf.Class.getDefaultInstance().flags) {
@@ -455,9 +462,9 @@ open class ClassWriter(stringTable: StringTable) : KmClassVisitor() {
     }
 }
 
-open class PackageWriter(stringTable: StringTable) : KmPackageVisitor() {
+open class PackageWriter(stringTable: StringTable, contextExtensions: List<WriteContextExtension> = emptyList()) : KmPackageVisitor() {
     protected val t = ProtoBuf.Package.newBuilder()!!
-    protected val c = WriteContext(stringTable)
+    protected val c: WriteContext = WriteContext(stringTable, contextExtensions)
 
     override fun visitFunction(flags: Flags, name: String): KmFunctionVisitor? =
         writeFunction(c, flags, name) { t.addFunction(it) }
@@ -478,6 +485,37 @@ open class PackageWriter(stringTable: StringTable) : KmPackageVisitor() {
             t.versionRequirementTable = it
         }
     }
+}
+
+private fun createPackageWriter(c: WriteContext, output: (ProtoBuf.Package.Builder) -> Unit): KmPackageVisitor =
+    object : PackageWriter(c.strings, c.contextExtensions) {
+        override fun visitEnd() {
+            super.visitEnd()
+            output(t)
+        }
+    }
+
+private fun createClassWriter(c: WriteContext, output: (ProtoBuf.Class.Builder) -> Unit): KmClassVisitor =
+    object : ClassWriter(c.strings, c.contextExtensions) {
+        override fun visitEnd() {
+            super.visitEnd()
+            output(t)
+        }
+    }
+
+open class PackageFragmentWriter(stringTable: StringTable, contextExtensions: List<WriteContextExtension> = emptyList()) :
+    KmPackageFragmentVisitor() {
+    protected val t = ProtoBuf.PackageFragment.newBuilder()
+    protected val c: WriteContext = WriteContext(stringTable, contextExtensions)
+
+    override fun visitPackage(): KmPackageVisitor? = createPackageWriter(c) { t.setPackage(it) }
+
+    override fun visitClass(): KmClassVisitor? = createClassWriter(c) { t.addClass_(it) }
+
+    override fun visitExtensions(type: KmExtensionType): KmPackageFragmentExtensionVisitor? =
+        applySingleExtension(type) {
+            writePackageFragmentExtensions(type, t, c)
+        }
 }
 
 open class LambdaWriter(stringTable: StringTable) : KmLambdaVisitor() {

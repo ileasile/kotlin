@@ -218,12 +218,12 @@ class KmPackage : KmPackageVisitor(), KmDeclarationContainer {
 }
 
 /**
- * Represents a Kotlin package fragment.
+ * Represents a Kotlin package fragment. This is used to represent metadata of a part of a module on platforms other than JVM.
  */
 class KmPackageFragment : KmPackageFragmentVisitor() {
 
     /**
-     * Top-level functions, typealiases and properties in the package fragment.
+     * Top-level functions, type aliases and properties in the package fragment.
      */
     var pkg: KmPackage? = null
 
@@ -234,6 +234,15 @@ class KmPackageFragment : KmPackageFragmentVisitor() {
 
     private val extensions: List<KmPackageFragmentExtension> =
         MetadataExtensions.INSTANCES.map(MetadataExtensions::createPackageFragmentExtensions)
+
+    override fun visitPackage(): KmPackageVisitor? =
+        KmPackage().also { pkg = it }
+
+    override fun visitExtensions(type: KmExtensionType): KmPackageFragmentExtensionVisitor? =
+        extensions.singleOfType(type)
+
+    override fun visitClass(): KmClassVisitor? =
+        KmClass().addTo(classes)
 
     /**
      * Populates the given visitor with data in this package fragment.

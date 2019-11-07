@@ -11,9 +11,20 @@ import kotlinx.metadata.impl.extensions.*
 import kotlinx.metadata.klib.*
 import org.jetbrains.kotlin.library.metadata.KlibMetadataProtoBuf
 import org.jetbrains.kotlin.metadata.ProtoBuf
+import org.jetbrains.kotlin.metadata.deserialization.NameResolverImpl
 import org.jetbrains.kotlin.metadata.deserialization.getExtensionOrNull
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.serialization.StringTableImpl
 
-class KlibMetadataExtensions : MetadataExtensions {
+internal class KlibMetadataExtensions : MetadataExtensions {
+
+    private fun BasicReadContext.getSourceFile(index: Int) =
+        contextExtensions.filterIsInstance<SourceFileIndexReadExtension>().first().getSourceFile(index)
+
+    private fun WriteContext.getIndexOf(file: KlibSourceFile) =
+        contextExtensions.filterIsInstance<ReverseSourceFileIndexWriteExtension>().first().getIndexOf(file)
+
     override fun readClassExtensions(v: KmClassVisitor, proto: ProtoBuf.Class, c: ReadContext) {
         val extension = v.visitExtensions(KlibClassExtensionVisitor.TYPE) as? KlibClassExtensionVisitor ?: return
 
@@ -21,24 +32,33 @@ class KlibMetadataExtensions : MetadataExtensions {
             extension.visitAnnotation(annotation.readAnnotation(c.strings))
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.classUniqId)?.let { descriptorUniqId ->
-            extension.visitUniqId(descriptorUniqId.readDescriptorUniqId())
+            extension.visitUniqId(descriptorUniqId.readUniqId())
         }
-        proto.getExtensionOrNull(KlibMetadataProtoBuf.classFile)?.let(extension::visitFile)
+        proto.getExtensionOrNull(KlibMetadataProtoBuf.classFile)?.let {
+            extension.visitFile(c.getSourceFile(it))
+        }
     }
 
     override fun readPackageExtensions(v: KmPackageVisitor, proto: ProtoBuf.Package, c: ReadContext) {
         val extension = v.visitExtensions(KlibPackageExtensionVisitor.TYPE) as? KlibPackageExtensionVisitor ?: return
 
-        proto.getExtensionOrNull(KlibMetadataProtoBuf.packageFqName)?.let(extension::visitFqName)
+        proto.getExtensionOrNull(KlibMetadataProtoBuf.packageFqName)?.let {
+            val fqName = (c.strings as NameResolverImpl).getPackageFqName(it)
+            extension.visitFqName(fqName)
+        }
     }
 
-    override fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: ReadContext) {
+    override fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: BasicReadContext) {
         val extension = v.visitExtensions(KlibPackageFragmentExtensionVisitor.TYPE) as? KlibPackageFragmentExtensionVisitor ?: return
 
-        proto.getExtension(KlibMetadataProtoBuf.packageFragmentFiles).forEach(extension::visitFile)
+        proto.getExtension(KlibMetadataProtoBuf.packageFragmentFiles)
+            .map { c.getSourceFile(it) }
+            .forEach(extension::visitFile)
         proto.getExtensionOrNull(KlibMetadataProtoBuf.isEmpty)?.let(extension::visitIsEmpty)
         proto.getExtensionOrNull(KlibMetadataProtoBuf.fqName)?.let(extension::visitFqName)
-        proto.getExtension(KlibMetadataProtoBuf.className).forEach(extension::visitClassName)
+        proto.getExtension(KlibMetadataProtoBuf.className)
+            .map(c.strings::getQualifiedClassName)
+            .forEach(extension::visitClassName)
     }
 
     override fun readFunctionExtensions(v: KmFunctionVisitor, proto: ProtoBuf.Function, c: ReadContext) {
@@ -48,9 +68,12 @@ class KlibMetadataExtensions : MetadataExtensions {
             extension.visitAnnotation(annotation.readAnnotation(c.strings))
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.functionUniqId)?.let { descriptorUniqId ->
-            extension.visitUniqId(descriptorUniqId.readDescriptorUniqId())
+            extension.visitUniqId(descriptorUniqId.readUniqId())
         }
-        proto.getExtensionOrNull(KlibMetadataProtoBuf.functionFile)?.let(extension::visitFile)
+        proto.getExtensionOrNull(KlibMetadataProtoBuf.functionFile)?.let {
+            val file = c.getSourceFile(it)
+            extension.visitFile(file)
+        }
     }
 
     override fun readPropertyExtensions(v: KmPropertyVisitor, proto: ProtoBuf.Property, c: ReadContext) {
@@ -66,7 +89,7 @@ class KlibMetadataExtensions : MetadataExtensions {
             extension.visitSetterAnnotation(annotation.readAnnotation(c.strings))
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.propertyUniqId)?.let { descriptorUniqId ->
-            extension.visitUniqId(descriptorUniqId.readDescriptorUniqId())
+            extension.visitUniqId(descriptorUniqId.readUniqId())
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.propertyFile)?.let(extension::visitFile)
         proto.getExtensionOrNull(KlibMetadataProtoBuf.compileTimeValue)?.let { value ->
@@ -81,7 +104,7 @@ class KlibMetadataExtensions : MetadataExtensions {
             extension.visitAnnotation(annotation.readAnnotation(c.strings))
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.constructorUniqId)?.let { descriptorUniqId ->
-            extension.visitUniqId(descriptorUniqId.readDescriptorUniqId())
+            extension.visitUniqId(descriptorUniqId.readUniqId())
         }
     }
 
@@ -92,7 +115,7 @@ class KlibMetadataExtensions : MetadataExtensions {
             extension.visitAnnotation(annotation.readAnnotation(c.strings))
         }
         proto.getExtensionOrNull(KlibMetadataProtoBuf.typeParamUniqId)?.let { descriptorUniqId ->
-            extension.visitUniqId(descriptorUniqId.readDescriptorUniqId())
+            extension.visitUniqId(descriptorUniqId.readUniqId())
         }
     }
 
@@ -114,18 +137,16 @@ class KlibMetadataExtensions : MetadataExtensions {
                 )
             }
 
-            override fun visitUniqId(uniqId: DescriptorUniqId) {
+            override fun visitUniqId(uniqId: UniqId) {
                 proto.setExtension(
                     KlibMetadataProtoBuf.classUniqId,
-                    uniqId.write().build()
+                    uniqId.writeUniqId().build()
                 )
             }
 
-            override fun visitFile(file: Int) {
-                proto.setExtension(
-                    KlibMetadataProtoBuf.classFile,
-                    file
-                )
+            override fun visitFile(file: KlibSourceFile) {
+                val fileIdx = c.getIndexOf(file)
+                proto.setExtension(KlibMetadataProtoBuf.classFile, fileIdx)
             }
         }
     }
@@ -137,8 +158,9 @@ class KlibMetadataExtensions : MetadataExtensions {
     ): KmPackageExtensionVisitor? {
         if (type != KlibPackageExtensionVisitor.TYPE) return null
         return object : KlibPackageExtensionVisitor() {
-            override fun visitFqName(name: Int) {
-                proto.setExtension(KlibMetadataProtoBuf.packageFqName, name)
+            override fun visitFqName(name: String) {
+                val nameIdx = (c.strings as StringTableImpl).getPackageFqNameIndex(FqName(name))
+                proto.setExtension(KlibMetadataProtoBuf.packageFqName, nameIdx)
             }
         }
     }
@@ -150,8 +172,9 @@ class KlibMetadataExtensions : MetadataExtensions {
     ): KmPackageFragmentExtensionVisitor? {
         if (type != KlibPackageFragmentExtensionVisitor.TYPE) return null
         return object : KlibPackageFragmentExtensionVisitor() {
-            override fun visitFile(file: Int) {
-                proto.addExtension(KlibMetadataProtoBuf.packageFragmentFiles, file)
+            override fun visitFile(file: KlibSourceFile) {
+                val fileIdx = c.getIndexOf(file)
+                proto.addExtension(KlibMetadataProtoBuf.packageFragmentFiles, fileIdx)
             }
 
             override fun visitIsEmpty(isEmpty: Boolean) {
@@ -162,8 +185,9 @@ class KlibMetadataExtensions : MetadataExtensions {
                 proto.setExtension(KlibMetadataProtoBuf.fqName, fqName)
             }
 
-            override fun visitClassName(className: Int) {
-                proto.addExtension(KlibMetadataProtoBuf.className, className)
+            override fun visitClassName(className: ClassName) {
+                val classNameIdx = (c.strings as StringTableImpl).getQualifiedClassNameIndex(ClassId.fromString(className))
+                proto.addExtension(KlibMetadataProtoBuf.className, classNameIdx)
             }
         }
     }
@@ -182,18 +206,16 @@ class KlibMetadataExtensions : MetadataExtensions {
                 )
             }
 
-            override fun visitUniqId(uniqId: DescriptorUniqId) {
+            override fun visitUniqId(uniqId: UniqId) {
                 proto.setExtension(
                     KlibMetadataProtoBuf.functionUniqId,
-                    uniqId.write().build()
+                    uniqId.writeUniqId().build()
                 )
             }
 
-            override fun visitFile(file: Int) {
-                proto.setExtension(
-                    KlibMetadataProtoBuf.functionFile,
-                    file
-                )
+            override fun visitFile(file: KlibSourceFile) {
+                val index = c.getIndexOf(file)
+                proto.setExtension(KlibMetadataProtoBuf.functionFile, index)
             }
         }
     }
@@ -226,10 +248,10 @@ class KlibMetadataExtensions : MetadataExtensions {
                 )
             }
 
-            override fun visitUniqId(uniqId: DescriptorUniqId) {
+            override fun visitUniqId(uniqId: UniqId) {
                 proto.setExtension(
                     KlibMetadataProtoBuf.propertyUniqId,
-                    uniqId.write().build()
+                    uniqId.writeUniqId().build()
                 )
             }
 
@@ -263,10 +285,10 @@ class KlibMetadataExtensions : MetadataExtensions {
                 )
             }
 
-            override fun visitUniqId(uniqId: DescriptorUniqId) {
+            override fun visitUniqId(uniqId: UniqId) {
                 proto.setExtension(
                     KlibMetadataProtoBuf.constructorUniqId,
-                    uniqId.write().build()
+                    uniqId.writeUniqId().build()
                 )
             }
         }
@@ -286,10 +308,10 @@ class KlibMetadataExtensions : MetadataExtensions {
                 )
             }
 
-            override fun visitUniqId(uniqId: DescriptorUniqId) {
+            override fun visitUniqId(uniqId: UniqId) {
                 proto.setExtension(
                     KlibMetadataProtoBuf.typeParamUniqId,
-                    uniqId.write().build()
+                    uniqId.writeUniqId().build()
                 )
             }
         }

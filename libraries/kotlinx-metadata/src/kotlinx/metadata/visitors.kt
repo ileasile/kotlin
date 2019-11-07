@@ -180,14 +180,15 @@ abstract class KmPackageVisitor @JvmOverloads constructor(delegate: KmPackageVis
 }
 
 /**
- * A visitor to visit package fragments.
+ * A visitor to visit package fragments. The package fragment can have no more than one package, and any number of classes,
+ * and must have at least one declaration.
  *
  * When using this class, [visitEnd] must be called exactly once and after calls to all other visit* methods.
  */
 abstract class KmPackageFragmentVisitor @JvmOverloads constructor(private val delegate: KmPackageFragmentVisitor? = null) {
 
     /**
-     * Visits package within package fragment.
+     * Visits package within the package fragment.
      */
     open fun visitPackage(): KmPackageVisitor? =
         delegate?.visitPackage()

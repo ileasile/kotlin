@@ -1,6 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-description = "Kotlin Library metadata manipulation library"
+description = "Kotlin Library (KLIB) metadata manipulation library"
 
 plugins {
     kotlin("jvm")
@@ -29,7 +29,11 @@ dependencies {
     compile(kotlinStdlib())
     shadows(project(":kotlinx-metadata"))
     shadows(project(":core:metadata"))
+    shadows(project(":compiler:serialization"))
+    // Looks like klib dependencies should be `compile` because otherwise
+    // it's impossible to use outer KLIB writing infrastructure in its current state.
     compile(project(":kotlin-util-klib-metadata"))
+    compile(project(":kotlin-util-klib"))
     shadows(protobufLite())
 }
 
@@ -46,7 +50,7 @@ tasks.register<ShadowJar>("shadowJar") {
     from(mainSourceSet.output)
     exclude("**/*.proto")
     configurations = listOf(shadows)
-    relocate("org.jetbrains.kotlin", "kotlinx.metadata.internal")
+    relocate("org.jetbrains.kotlin.metadata", "kotlinx.metadata.internal")
 
     val artifactRef = outputs.files.singleFile
     runtimeJarArtifactBy(this, artifactRef)

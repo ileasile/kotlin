@@ -11,13 +11,13 @@ import kotlinx.metadata.klib.impl.klibExtensions
 val KmFunction.annotations: MutableList<KmAnnotation>
     get() = klibExtensions.annotations
 
-var KmFunction.uniqId: DescriptorUniqId?
+var KmFunction.uniqId: UniqId?
     get() = klibExtensions.uniqId
     set(value) {
         klibExtensions.uniqId = value
     }
 
-var KmFunction.file: Int?
+var KmFunction.file: KlibSourceFile?
     get() = klibExtensions.file
     set(value) {
         klibExtensions.file = value
@@ -26,13 +26,13 @@ var KmFunction.file: Int?
 val KmClass.annotations: MutableList<KmAnnotation>
     get() = klibExtensions.annotations
 
-var KmClass.uniqId: DescriptorUniqId?
+var KmClass.uniqId: UniqId?
     get() = klibExtensions.uniqId
     set(value) {
         klibExtensions.uniqId = value
     }
 
-var KmClass.fileIndex: Int?
+var KmClass.file: KlibSourceFile?
     get() = klibExtensions.file
     set(value) {
         klibExtensions.file = value
@@ -47,7 +47,7 @@ val KmProperty.setterAnnotations: MutableList<KmAnnotation>
 val KmProperty.getterAnnotations: MutableList<KmAnnotation>
     get() = klibExtensions.getterAnnotations
 
-var KmProperty.uniqId: DescriptorUniqId?
+var KmProperty.uniqId: UniqId?
     get() = klibExtensions.uniqId
     set(value) {
         klibExtensions.uniqId = value
@@ -71,13 +71,13 @@ val KmType.annotations: MutableList<KmAnnotation>
 val KmConstructor.annotations: MutableList<KmAnnotation>
     get() = klibExtensions.annotations
 
-var KmConstructor.uniqId: DescriptorUniqId?
+var KmConstructor.uniqId: UniqId?
     get() = klibExtensions.uniqId
     set(value) {
         klibExtensions.uniqId = value
     }
 
-var KmPackage.fqName: Int?
+var KmPackage.fqName: String?
     get() = klibExtensions.fqName
     set(value) {
         klibExtensions.fqName = value
@@ -95,16 +95,16 @@ var KmPackageFragment.isEmpty: Boolean?
         klibExtensions.isEmpty = value
     }
 
-val KmPackageFragment.className: MutableList<Int>?
+val KmPackageFragment.className: MutableList<ClassName>?
     get() = klibExtensions.className
 
-val KmPackageFragment.packageFragmentFiles: MutableList<Int>?
+val KmPackageFragment.packageFragmentFiles: MutableList<KlibSourceFile>?
     get() = klibExtensions.packageFragmentFiles
 
 val KmTypeParameter.annotations: MutableList<KmAnnotation>
     get() = klibExtensions.annotations
 
-var KmTypeParameter.uniqId: DescriptorUniqId?
+var KmTypeParameter.uniqId: UniqId?
     get() = klibExtensions.uniqId
     set(value) {
         klibExtensions.uniqId = value

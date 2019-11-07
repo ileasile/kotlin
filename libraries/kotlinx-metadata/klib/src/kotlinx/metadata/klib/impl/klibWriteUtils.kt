@@ -5,10 +5,26 @@
 
 package kotlinx.metadata.klib.impl
 
-import kotlinx.metadata.klib.DescriptorUniqId
+import kotlinx.metadata.klib.KlibHeader
+import kotlinx.metadata.klib.KlibSourceFile
+import kotlinx.metadata.klib.UniqId
 import org.jetbrains.kotlin.library.metadata.KlibMetadataProtoBuf
 
-fun DescriptorUniqId.write(): KlibMetadataProtoBuf.DescriptorUniqId.Builder =
+internal fun UniqId.writeUniqId(): KlibMetadataProtoBuf.DescriptorUniqId.Builder =
     KlibMetadataProtoBuf.DescriptorUniqId.newBuilder().apply {
-        index = this@write.index
+        index = this@writeUniqId.index
+    }
+
+internal fun KlibHeader.writeHeader(): KlibMetadataProtoBuf.Header.Builder =
+    KlibMetadataProtoBuf.Header.newBuilder().also { proto ->
+        val (strings, qualifiedNames) = stringTable.buildProto()
+        proto.qualifiedNames = qualifiedNames
+        proto.strings = strings
+        proto.addAllPackageFragmentName(packageFragmentName)
+        proto.addAllFile(file.map { it.writeFile().build() })
+    }
+
+internal fun KlibSourceFile.writeFile(): KlibMetadataProtoBuf.File.Builder =
+    KlibMetadataProtoBuf.File.newBuilder().also { proto ->
+        proto.name = name
     }

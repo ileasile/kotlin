@@ -11,9 +11,9 @@ abstract class KlibFunctionExtensionVisitor : KmFunctionExtensionVisitor {
 
     abstract fun visitAnnotation(annotation: KmAnnotation)
 
-    abstract fun visitUniqId(uniqId: DescriptorUniqId)
+    abstract fun visitUniqId(uniqId: UniqId)
 
-    abstract fun visitFile(file: Int)
+    abstract fun visitFile(file: KlibSourceFile)
 
     override val type: KmExtensionType
         get() = TYPE
@@ -27,9 +27,9 @@ abstract class KlibClassExtensionVisitor : KmClassExtensionVisitor {
 
     abstract fun visitAnnotation(annotation: KmAnnotation)
 
-    abstract fun visitUniqId(uniqId: DescriptorUniqId)
+    abstract fun visitUniqId(uniqId: UniqId)
 
-    abstract fun visitFile(file: Int)
+    abstract fun visitFile(file: KlibSourceFile)
 
     override val type: KmExtensionType
         get() = TYPE
@@ -61,7 +61,7 @@ abstract class KlibPropertyExtensionVisitor : KmPropertyExtensionVisitor {
 
     abstract fun visitFile(file: Int)
 
-    abstract fun visitUniqId(uniqId: DescriptorUniqId)
+    abstract fun visitUniqId(uniqId: UniqId)
 
     abstract fun visitCompileTimeValue(value: KmAnnotationArgument<*>)
 
@@ -77,7 +77,7 @@ abstract class KlibConstructorExtensionVisitor : KmConstructorExtensionVisitor {
 
     abstract fun visitAnnotation(annotation: KmAnnotation)
 
-    abstract fun visitUniqId(uniqId: DescriptorUniqId)
+    abstract fun visitUniqId(uniqId: UniqId)
 
     override val type: KmExtensionType
         get() = TYPE
@@ -91,7 +91,7 @@ abstract class KlibTypeParameterExtensionVisitor : KmTypeParameterExtensionVisit
 
     abstract fun visitAnnotation(annotation: KmAnnotation)
 
-    abstract fun visitUniqId(uniqId: DescriptorUniqId)
+    abstract fun visitUniqId(uniqId: UniqId)
 
     override val type: KmExtensionType
         get() = TYPE
@@ -103,7 +103,7 @@ abstract class KlibTypeParameterExtensionVisitor : KmTypeParameterExtensionVisit
 
 abstract class KlibPackageExtensionVisitor : KmPackageExtensionVisitor {
 
-    abstract fun visitFqName(name: Int)
+    abstract fun visitFqName(name: String)
 
     override val type: KmExtensionType
         get() = TYPE
@@ -115,13 +115,13 @@ abstract class KlibPackageExtensionVisitor : KmPackageExtensionVisitor {
 
 abstract class KlibPackageFragmentExtensionVisitor : KmPackageFragmentExtensionVisitor {
 
-    abstract fun visitFile(file: Int)
+    abstract fun visitFile(file: KlibSourceFile)
 
     abstract fun visitIsEmpty(isEmpty: Boolean)
 
     abstract fun visitFqName(fqName: String)
 
-    abstract fun visitClassName(className: Int)
+    abstract fun visitClassName(className: ClassName)
 
     override val type: KmExtensionType
         get() = TYPE
