@@ -231,6 +231,12 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
             if (regularClass.symbol.classId.isLocal) {
                 prepareLocalClassForBodyResolve(regularClass)
             }
+            lookupSuperTypes(regularClass, lookupInterfaces = false, deep = true, useSiteSession = session)
+                .asReversed().mapNotNullTo(topLevelScopes) {
+                    val classId = it.lookupTag.classId
+                    if (classId.isLocal) null // TODO: local classes
+                    else nestedClassifierScope(it.lookupTag.classId, session)
+                }
             val companionObjects = regularClass.declarations.filterIsInstance<FirRegularClass>().filter { it.isCompanion }
             for (companionObject in companionObjects) {
                 topLevelScopes += nestedClassifierScope(companionObject)

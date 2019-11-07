@@ -6,12 +6,12 @@ class Derived : Base() {
     class DerivedNested
 
     companion object {
-        val b: BaseNested = <!UNRESOLVED_REFERENCE!>BaseNested<!>()
+        val b: BaseNested = BaseNested()
 
         val d: DerivedNested = DerivedNested()
 
         fun foo() {
-            val bb: BaseNested = <!UNRESOLVED_REFERENCE!>BaseNested<!>()
+            val bb: BaseNested = BaseNested()
             val dd: DerivedNested = DerivedNested()
         }
     }
