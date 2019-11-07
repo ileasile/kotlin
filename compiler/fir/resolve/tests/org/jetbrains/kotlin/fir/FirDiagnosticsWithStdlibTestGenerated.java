@@ -371,6 +371,11 @@ public class FirDiagnosticsWithStdlibTestGenerated extends AbstractFirDiagnostic
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/complexFlexibleInference.kt");
         }
 
+        @TestMetadata("ExtendableBuilder.kt")
+        public void testExtendableBuilder() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/ExtendableBuilder.kt");
+        }
+
         @TestMetadata("FieldAndGetter.kt")
         public void testFieldAndGetter() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/stdlib/j+k/FieldAndGetter.kt");
