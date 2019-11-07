@@ -20,8 +20,6 @@ import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
 import org.jetbrains.kotlin.name.Name
 
 class FirClassDeclaredMemberScope(klass: FirClass<*>) : FirScope() {
-    private val nestedClassifierScope = nestedClassifierScope(klass)
-
     private val callablesIndex: Map<Name, List<FirCallableSymbol<*>>> = run {
         val result = mutableMapOf<Name, MutableList<FirCallableSymbol<*>>>()
         loop@ for (declaration in klass.declarations) {
@@ -68,5 +66,5 @@ class FirClassDeclaredMemberScope(klass: FirClass<*>) : FirScope() {
     override fun processClassifiersByName(
         name: Name,
         processor: (FirClassifierSymbol<*>) -> ProcessorAction
-    ): ProcessorAction = nestedClassifierScope.processClassifiersByName(name, processor)
+    ): ProcessorAction = NEXT
 }
