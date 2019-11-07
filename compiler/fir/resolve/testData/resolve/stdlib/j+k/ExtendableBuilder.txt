@@ -1,4 +1,4 @@
 FILE: test.kt
-    public final fun <M : R|ExtendableMessage<M>|, T> R|ExtendableMessage<M>|.getExtensionOrNull(extension: R|GeneratedExtension<M, T>|): R|T?| {
-        ^getExtensionOrNull this@R|/ExtendableMessageOrBuilder|.R|/ExtendableMessageOrBuilder.getExtension|<R|T?|>(R|<local>/extension|)
+    public final fun <M : R|GeneratedMessageLite.ExtendableMessage<M>|, T> R|GeneratedMessageLite.ExtendableMessage<M>|.getExtensionOrNull(extension: R|GeneratedExtension<M, T>|): R|T?| {
+        ^getExtensionOrNull this@R|/GeneratedMessageLite.ExtendableMessageOrBuilder|.R|/GeneratedMessageLite.ExtendableMessageOrBuilder.getExtension|<R|T?|>(R|<local>/extension|)
     }
