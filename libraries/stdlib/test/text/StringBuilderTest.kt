@@ -185,14 +185,17 @@ class StringBuilderTest {
 
             String(charArray, 0, 1)
 
-            sb.append(charArray, 0, charArray.size /*25*/)
-            sb.append(charArray, 0, 9)
-            sb.append(charArray, 15, 10)
-            sb.append(charArray, 9, 6)
+            sb.appendRange(charArray, 0, charArray.size /*25*/)
+            sb.appendRange(charArray, 0, 9)
+            sb.appendRange(charArray, 15, 25)
+            sb.appendRange(charArray, 9, 15)
 
             assertEquals("my append char array testmy appendarray test char ", sb.toString())
 
-            // test throws
+            assertFails { sb.appendRange(charArrayOf('_', '*', '#'), -1, 0) }
+            assertFails { sb.appendRange(charArrayOf('_', '*', '#'), 0, 4) }
+            assertFails { sb.appendRange(charArrayOf('_', '*', '#'), 2, 1) }
+            assertFails { sb.appendRange(charArrayOf('_', '*', '#'), 2, -1) }
         }
     }
 
@@ -317,14 +320,15 @@ class StringBuilderTest {
             assertEquals("_my insert CharArray test", sb.toString())
             sb.insert(10, charArrayOf('T'))
             assertEquals("_my insertT CharArray test", sb.toString())
-            sb.insert(26, charArrayOf('_', '*', '#'), 0, 1)
+            sb.insertRange(26, charArrayOf('_', '*', '#'), 0, 1)
             assertEquals("_my insertT CharArray test_", sb.toString())
 
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(-1, charArrayOf('_')) }
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(sb.length + 1, charArrayOf('_')) }
-            assertFails { sb.insert(0, charArrayOf('_', '*', '#'), -1, 0) }
-            assertFails { sb.insert(0, charArrayOf('_', '*', '#'), 0, 4) }
-            assertFails { sb.insert(0, charArrayOf('_', '*', '#'), 2, -1) }
+            assertFails { sb.insertRange(0, charArrayOf('_', '*', '#'), -1, 0) }
+            assertFails { sb.insertRange(0, charArrayOf('_', '*', '#'), 0, 4) }
+            assertFails { sb.insertRange(0, charArrayOf('_', '*', '#'), 2, 1) }
+            assertFails { sb.insertRange(0, charArrayOf('_', '*', '#'), 2, -1) }
         }
     }
 

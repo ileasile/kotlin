@@ -81,11 +81,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
-    actual fun append(chars: CharArray, offset: Int, length: Int): StringBuilder {
-        string += String(chars, offset, length)
-        return this
-    }
-
     actual fun append(string: String): StringBuilder {
         this.string += string
         return this
@@ -128,14 +123,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         AbstractList.checkPositionIndex(index, length)
 
         string = string.substring(0, index) + String(chars) + string.substring(index)
-        return this
-    }
-
-    actual fun insert(index: Int, chars: CharArray, offset: Int, length: Int): StringBuilder {
-        AbstractList.checkPositionIndex(index, this.length)
-        AbstractList.checkBoundsIndexes(offset, offset + length, chars.size)
-
-        string = string.substring(0, index) + String(chars, offset, length) + string.substring(index)
         return this
     }
 
@@ -264,6 +251,19 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
             destination[dstIndex++] = string[index]
         }
     }
+
+    public fun appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder {
+        string += String(chars, startIndex, endIndex - startIndex)
+        return this
+    }
+
+    public fun insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder {
+        AbstractList.checkPositionIndex(index, this.length)
+        AbstractList.checkBoundsIndexes(startIndex, endIndex, chars.size)
+
+        string = string.substring(0, index) + String(chars, startIndex, endIndex - startIndex) + string.substring(index)
+        return this
+    }
 }
 
 
@@ -292,3 +292,11 @@ public actual inline fun StringBuilder.deleteRange(startIndex: Int, endIndex: In
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =
     this.toCharArray(destination, destinationOffset, startIndex, endIndex)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
+    this.appendRange(chars, startIndex, endIndex)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
+    this.insertRange(index, chars, startIndex, endIndex)

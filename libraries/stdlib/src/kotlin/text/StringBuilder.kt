@@ -79,22 +79,6 @@ expect class StringBuilder : Appendable, CharSequence {
     fun append(chars: CharArray): StringBuilder
 
     /**
-     * Appends characters in a subarray of the specified [chars] array to this string builder.
-     *
-     * Characters are appended in order, starting at specified [offset].
-     *
-     * @param chars the array from which characters are appended.
-     * @param offset the beginning (inclusive) of the subarray to append.
-     * @param length the length of the subarray to append.
-     *
-     * @throws IndexOutOfBoundsException if either [offset] or [length] are less than zero
-     *  or `offset + length` is out of [chars] array bounds.
-     *
-     * @return this string builder.
-     */
-    fun append(chars: CharArray, offset: Int, length: Int): StringBuilder
-
-    /**
      * Appends the specified [string] to this string builder.
      *
      * @return this string builder.
@@ -178,24 +162,6 @@ expect class StringBuilder : Appendable, CharSequence {
      * @return this string builder.
      */
     fun insert(index: Int, chars: CharArray): StringBuilder
-
-    /**
-     * Inserts characters in a subarray of the specified [chars] array into this string builder at the specified [index].
-     *
-     * The inserted characters go in same order as in the [chars] array, starting at [index].
-     *
-     * @param index the position in this string builder to insert at.
-     * @param chars the array from which characters are inserted.
-     * @param offset the beginning (inclusive) of the subarray to insert.
-     * @param length the length of the subarray to insert.
-     *
-     * @throws IndexOutOfBoundsException if either [offset] or [length] are less than zero
-     *  or `offset + length` is out of [chars] array bounds.
-     * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
-     *
-     * @return this string builder.
-     */
-    fun insert(index: Int, chars: CharArray, offset: Int, length: Int): StringBuilder
 
     /**
      * Inserts characters in the specified character sequence [csq] into this string builder at the specified [index].
@@ -351,6 +317,38 @@ public expect fun StringBuilder.deleteRange(startIndex: Int, endIndex: Int): Str
  *  or when that index is out of the [destination] array indices range.
  */
 public expect fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int)
+
+/**
+ * Appends characters in a subarray of the specified [chars] array to this string builder.
+ *
+ * Characters are appended in order, starting at specified [startIndex].
+ *
+ * @param chars the array from which characters are appended.
+ * @param startIndex the beginning (inclusive) of the subarray to append.
+ * @param endIndex the end (exclusive) of the subarray to append.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [chars] array indices or when `startIndex > endIndex`.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder
+
+/**
+ * Inserts characters in a subarray of the specified [chars] array into this string builder at the specified [index].
+ *
+ * The inserted characters go in same order as in the [chars] array, starting at [index].
+ *
+ * @param index the position in this string builder to insert at.
+ * @param chars the array from which characters are inserted.
+ * @param startIndex the beginning (inclusive) of the subarray to insert.
+ * @param endIndex the end (exclusive) of the subarray to insert.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [chars] array indices or when `startIndex > endIndex`.
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder
 
 /**
  * Builds new string by populating newly created [StringBuilder] using provided [builderAction]

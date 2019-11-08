@@ -36,6 +36,14 @@ public actual inline fun StringBuilder.deleteRange(startIndex: Int, endIndex: In
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =
     this.getChars(startIndex, endIndex, destination, destinationOffset)
 
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
+    this.append(chars, startIndex, endIndex - startIndex)
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
+    this.insert(index, chars, startIndex, endIndex - startIndex)
+
 
 private object SystemProperties {
     /** Line separator for current system. */
