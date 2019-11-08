@@ -91,18 +91,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
-    actual fun delete(startIndex: Int, endIndex: Int): StringBuilder {
-        if (startIndex < 0 || startIndex > length) {
-            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
-        }
-        if (startIndex > endIndex) {
-            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
-        }
-
-        string = string.substring(0, startIndex) + string.substring(endIndex)
-        return this
-    }
-
     actual fun capacity(): Int = maxOf(_capacity, length)
 
     actual fun ensureCapacity(minimumCapacity: Int) {
@@ -249,6 +237,18 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
+    public fun deleteRange(startIndex: Int, endIndex: Int): StringBuilder {
+        if (startIndex < 0 || startIndex > length) {
+            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
+        }
+        if (startIndex > endIndex) {
+            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
+        }
+
+        string = string.substring(0, startIndex) + string.substring(endIndex)
+        return this
+    }
+
     public fun toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) {
         AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
 
@@ -285,6 +285,9 @@ public actual inline fun StringBuilder.setRange(startIndex: Int, endIndex: Int, 
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.deleteAt(index: Int): StringBuilder = this.deleteAt(index)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.deleteRange(startIndex: Int, endIndex: Int): StringBuilder = this.deleteRange(startIndex, endIndex)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =

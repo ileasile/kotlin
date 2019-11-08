@@ -9,6 +9,14 @@
 package kotlin.text
 
 /**
+ * Clears the content of this string builder making it empty.
+ *
+ * @sample samples.text.Strings.clearStringBuilder
+ */
+@SinceKotlin("1.3")
+public actual fun StringBuilder.clear(): StringBuilder = apply { setLength(0) }
+
+/**
  * Sets the character at the specified [index] to the specified [value].
  */
 @kotlin.internal.InlineOnly
@@ -18,16 +26,11 @@ public actual inline operator fun StringBuilder.set(index: Int, value: Char): Un
 public actual inline fun StringBuilder.setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder =
     this.replace(startIndex, endIndex, string)
 
-/**
- * Clears the content of this string builder making it empty.
- *
- * @sample samples.text.Strings.clearStringBuilder
- */
-@SinceKotlin("1.3")
-public actual fun StringBuilder.clear(): StringBuilder = apply { setLength(0) }
-
 @kotlin.internal.InlineOnly
 public actual inline fun StringBuilder.deleteAt(index: Int): StringBuilder = this.deleteCharAt(index)
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.deleteRange(startIndex: Int, endIndex: Int): StringBuilder = this.delete(startIndex, endIndex)
 
 @kotlin.internal.InlineOnly
 public actual inline fun StringBuilder.toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) =

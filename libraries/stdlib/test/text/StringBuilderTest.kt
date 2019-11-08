@@ -214,19 +214,19 @@ class StringBuilderTest {
     @Test
     fun deleteSubstring() {
         StringBuilder("my delete substring test").let { sb ->
-            sb.delete(0, 2)
+            sb.deleteRange(0, 2)
             assertEquals(" delete substring test", sb.toString())
-            sb.delete(7, 17)
+            sb.deleteRange(7, 17)
             assertEquals(" delete test", sb.toString())
-            sb.delete(8, 12)
+            sb.deleteRange(8, 12)
             assertEquals(" delete ", sb.toString())
-            sb.delete(8, 12)
+            sb.deleteRange(8, 12)
             assertEquals(" delete ", sb.toString())
 
-            assertFails { sb.delete(-1, 1) }
-            assertFails { sb.delete(0, -1) }
-            assertFails { sb.delete(2, 1) }
-            assertFails { sb.delete(sb.length + 1, sb.length + 2) }
+            assertFails { sb.deleteRange(-1, 1) }
+            assertFails { sb.deleteRange(0, -1) }
+            assertFails { sb.deleteRange(2, 1) }
+            assertFails { sb.deleteRange(sb.length + 1, sb.length + 2) }
         }
     }
 

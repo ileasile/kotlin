@@ -102,18 +102,6 @@ expect class StringBuilder : Appendable, CharSequence {
     fun append(string: String): StringBuilder
 
     /**
-     * Removes characters in the specified range from this string builder.
-     *
-     * @param startIndex the beginning (inclusive) of the range to remove.
-     * @param endIndex the end (exclusive) of the range to remove.
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [startIndex] is negative, greater than the length of this string builder, or `startIndex > endIndex`.
-     *
-     * @return this string builder.
-     */
-    fun delete(startIndex: Int, endIndex: Int): StringBuilder
-
-    /**
      * Returns the current capacity of this string builder.
      *
      * The capacity is the maximum length this string builder can have before an allocation occurs.
@@ -337,6 +325,18 @@ public expect fun StringBuilder.setRange(startIndex: Int, endIndex: Int, string:
  * @return this string builder.
  */
 public expect fun StringBuilder.deleteAt(index: Int): StringBuilder
+
+/**
+ * Removes characters in the specified range from this string builder.
+ *
+ * @param startIndex the beginning (inclusive) of the range to remove.
+ * @param endIndex the end (exclusive) of the range to remove.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [startIndex] is negative, greater than the length of this string builder, or `startIndex > endIndex`.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.deleteRange(startIndex: Int, endIndex: Int): StringBuilder
 
 /**
  * Copies characters from this string builder into the [destination] character array.
