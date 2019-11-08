@@ -783,7 +783,7 @@ class TypedHandlerTest : KotlinLightCodeInsightTestCase() {
             """
                 |class A(
                 |		a: Int,
-                |<caret>
+                |		<caret>
                 |)
                 """,
             enableSmartEnterWithTabs()
@@ -801,7 +801,7 @@ class TypedHandlerTest : KotlinLightCodeInsightTestCase() {
             """
                 |fun method(
                 |         arg1: String,
-                |<caret>
+                |         <caret>
                 |) {}
                 """,
             enableSmartEnterWithTabs()

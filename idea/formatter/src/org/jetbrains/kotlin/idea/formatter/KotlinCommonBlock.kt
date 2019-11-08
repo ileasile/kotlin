@@ -909,8 +909,8 @@ private fun getAlignmentForChildInParenthesis(
             val childNodeType = node.elementType
 
             val prev = getPrevWithoutWhitespace(node)
-            if (prev != null && prev.elementType === TokenType.ERROR_ELEMENT || childNodeType === TokenType.ERROR_ELEMENT) {
-                // Prefer align to parameters on incomplete code (case of line break after comma, when next parameters is absent)
+            if (prev != null && prev.elementType == COMMA) {
+                // Prefer align to parameters after comma before close bracket
                 return parameterAlignment
             }
 
