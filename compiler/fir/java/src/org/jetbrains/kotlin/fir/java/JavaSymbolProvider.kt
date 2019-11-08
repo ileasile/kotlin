@@ -59,7 +59,8 @@ class JavaSymbolProvider(
 
     override fun getClassDeclaredMemberScope(classId: ClassId): FirScope? {
         val classSymbol = getClassLikeSymbolByFqName(classId) ?: return null
-        return declaredMemberScope(classSymbol.fir)
+        val klass = classSymbol.fir
+        return declaredMemberScope(klass, useLazyNestedClassifierScope = klass is FirJavaClass)
     }
 
     override fun getClassUseSiteMemberScope(
@@ -92,7 +93,7 @@ class JavaSymbolProvider(
         visitedSymbols: MutableSet<FirClassLikeSymbol<*>>
     ): JavaClassUseSiteMemberScope {
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
-            val declaredScope = declaredMemberScope(regularClass)
+            val declaredScope = declaredMemberScope(regularClass, useLazyNestedClassifierScope = regularClass is FirJavaClass)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
                     .mapNotNull { useSiteSuperType ->
