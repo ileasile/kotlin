@@ -19,7 +19,11 @@ package org.jetbrains.kotlin.idea.parameterInfo
 import com.intellij.codeInsight.CodeInsightBundle
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.lang.parameterInfo.*
+import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.progress.ProgressIndicatorProvider
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.psi.impl.source.tree.LeafPsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.ui.Gray
@@ -191,93 +195,137 @@ abstract class KotlinParameterInfoWithCallHandlerBase<TArgumentList : KtElement,
     override fun updateUI(itemToShow: FunctionDescriptor, context: ParameterInfoUIContext) {
         if (!updateUIOrFail(itemToShow, context)) {
             context.isUIComponentEnabled = false
-            return
         }
     }
 
-    private fun updateUIOrFail(itemToShow: FunctionDescriptor, context: ParameterInfoUIContext): Boolean {
-        if (context.parameterOwner == null || !context.parameterOwner.isValid) return false
-        if (!argumentListClass.java.isInstance(context.parameterOwner)) return false
+    private fun updateUIOrFail(
+        itemToShow: FunctionDescriptor,
+        context: ParameterInfoUIContext
+    ): Boolean {
+        if (context.parameterOwner == null || !context.parameterOwner.isValid) {
+            return false
+        }
+        if (!argumentListClass.java.isInstance(context.parameterOwner)) {
+            return false
+        }
         @Suppress("UNCHECKED_CAST")
         val argumentList = context.parameterOwner as TArgumentList
-
-        val currentArgumentIndex = context.currentParameterIndex
-        if (currentArgumentIndex < 0) return false // by some strange reason we are invoked with currentParameterIndex == -1 during initialization
-
-        val bindingContext = argumentList.analyze(BodyResolveMode.PARTIAL)
-        val call = findCall(argumentList, bindingContext) ?: return false
-
         val project = argumentList.project
 
-        val (substitutedDescriptor, argumentToParameter, highlightParameterIndex, isGrey) = matchCallWithSignature(
-            call, itemToShow, currentArgumentIndex, bindingContext, argumentList.getResolutionFacade()
-        ) ?: return false
-
-        var boldStartOffset = -1
-        var boldEndOffset = -1
-        val text = buildString {
-            val usedParameterIndices = HashSet<Int>()
-            var namedMode = false
-
-            if (call.callType == Call.CallType.ARRAY_SET_METHOD) {
-                // for set-operator the last parameter is used for the value assigned
-                usedParameterIndices.add(substitutedDescriptor.valueParameters.lastIndex)
-            }
-
-            val includeParameterNames = !substitutedDescriptor.hasSynthesizedParameterNames()
-
-            fun appendParameter(parameter: ValueParameterDescriptor) {
-                if (length > 0) {
-                    append(", ")
-                }
-
-                val highlightParameter = parameter.index == highlightParameterIndex
-                if (highlightParameter) {
-                    boldStartOffset = length
-                }
-
-                append(renderParameter(parameter, includeParameterNames, namedMode, project))
-
-                if (highlightParameter) {
-                    boldEndOffset = length
-                }
-            }
-
-            for (argument in call.valueArguments) {
-                if (argument is LambdaArgument) continue
-                val parameter = argumentToParameter(argument) ?: continue
-                if (!usedParameterIndices.add(parameter.index)) continue
-
-                if (argument.isNamed()) {
-                    namedMode = true
-                }
-
-                appendParameter(parameter)
-            }
-
-            for (parameter in substitutedDescriptor.valueParameters) {
-                if (parameter.index !in usedParameterIndices) {
-                    appendParameter(parameter)
-                }
-            }
-
-            if (length == 0) {
-                append(CodeInsightBundle.message("parameter.info.no.parameters"))
-            }
+        val currentArgumentIndex = context.currentParameterIndex
+        // by some strange reason we are invoked with currentParameterIndex == -1 during initialization
+        if (currentArgumentIndex < 0) {
+            return false
         }
 
+        val resolutionFacade = argumentList.getResolutionFacade()
 
-        val color = if (isResolvedToDescriptor(call, itemToShow, bindingContext))
-            GREEN_BACKGROUND
-        else
-            context.defaultParameterColor
+        val task = ThrowableComputable<ParameterInfoResult, Exception> {
+            val bindingContext = argumentList.analyze(BodyResolveMode.PARTIAL)
+            val call = findCall(argumentList, bindingContext) ?: return@ThrowableComputable null
 
-        val isDeprecated = KotlinBuiltIns.isDeprecated(itemToShow)
+            val matchCallWithSignature = matchCallWithSignature(
+                call, itemToShow, currentArgumentIndex, bindingContext, resolutionFacade
+            ) ?: return@ThrowableComputable null
+            val (substitutedDescriptor, argumentToParameter, highlightParameterIndex, isGrey) = matchCallWithSignature
 
-        context.setupUIComponentPresentation(text, boldStartOffset, boldEndOffset, isGrey, isDeprecated, false, color)
+            ProgressIndicatorProvider.checkCanceled()
 
-        return true
+            var boldStartOffset = -1
+            var boldEndOffset = -1
+            val text = buildString {
+                val usedParameterIndices = HashSet<Int>()
+                var namedMode = false
+
+                if (call.callType == Call.CallType.ARRAY_SET_METHOD) {
+                    // for set-operator the last parameter is used for the value assigned
+                    usedParameterIndices.add(substitutedDescriptor.valueParameters.lastIndex)
+                }
+
+                val includeParameterNames = !substitutedDescriptor.hasSynthesizedParameterNames()
+
+                fun appendParameter(parameter: ValueParameterDescriptor) {
+                    if (length > 0) {
+                        append(", ")
+                    }
+
+                    val highlightParameter = parameter.index == highlightParameterIndex
+                    if (highlightParameter) {
+                        boldStartOffset = length
+                    }
+
+                    append(renderParameter(parameter, includeParameterNames, namedMode, project))
+
+                    if (highlightParameter) {
+                        boldEndOffset = length
+                    }
+                }
+
+                for (argument in call.valueArguments) {
+                    if (argument is LambdaArgument) continue
+                    val parameter = argumentToParameter(argument) ?: continue
+                    if (!usedParameterIndices.add(parameter.index)) continue
+
+                    if (argument.isNamed()) {
+                        namedMode = true
+                    }
+
+                    appendParameter(parameter)
+                }
+
+                for (parameter in substitutedDescriptor.valueParameters) {
+                    if (parameter.index !in usedParameterIndices) {
+                        appendParameter(parameter)
+                    }
+                }
+
+                if (length == 0) {
+                    append(CodeInsightBundle.message("parameter.info.no.parameters"))
+                }
+            }
+
+
+            val color = if (isResolvedToDescriptor(call, itemToShow, bindingContext))
+                GREEN_BACKGROUND
+            else
+                context.defaultParameterColor
+
+            ProgressIndicatorProvider.checkCanceled()
+
+            val isDeprecated = KotlinBuiltIns.isDeprecated(itemToShow)
+
+            ParameterInfoResult(
+                text,
+                boldStartOffset,
+                boldEndOffset,
+                isGrey,
+                isDeprecated,
+                false,
+                color
+            )
+        }
+
+        // TODO: [VD] processing via runProcessWithProgressSynchronously should be dropped as soon as
+        // {@link ParameterInfoHandler#calculateResult(Object, ParameterInfoUIContext)} is available
+
+        val result =
+            ProgressManager.getInstance().runProcessWithProgressSynchronously(task, "Calculate function parameter info", true, project)
+
+        result?.let {
+            context.setupUIComponentPresentation(
+                it.text, it.highlightStartOffset, it.highlightEndOffset,
+                it.isDisabled, it.strikeout, it.isDisabledBeforeHighlight, it.background
+            )
+            return true
+        }
+
+        return false
     }
+
+    private data class ParameterInfoResult(
+        val text: String, val highlightStartOffset: Int, val highlightEndOffset: Int, val isDisabled: Boolean,
+        val strikeout: Boolean, val isDisabledBeforeHighlight: Boolean, val background: Color
+    )
 
     //TODO
     override fun couldShowInLookup() = false
@@ -406,7 +454,9 @@ abstract class KotlinParameterInfoWithCallHandlerBase<TArgumentList : KtElement,
             }
         }
 
-        val candidates = callToUse.resolveCandidates(bindingContext, resolutionFacade)
+        ProgressIndicatorProvider.checkCanceled()
+
+        val candidates = runReadAction { callToUse.resolveCandidates(bindingContext, resolutionFacade) }
         // First try to find strictly matching descriptor, then one with the same declaration.
         // The second way is needed for the case when the descriptor was invalidated and new one has been built.
         // See testLocalFunctionBug().
