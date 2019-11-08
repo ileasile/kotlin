@@ -263,19 +263,6 @@ expect class StringBuilder : Appendable, CharSequence {
     fun insert(index: Int, string: String): StringBuilder
 
     /**
-     * Replaces characters in the specified range of this string builder with characters in the specified [string].
-     *
-     * @param startIndex the beginning (inclusive) of the range to replace.
-     * @param endIndex the end (exclusive) of the range to replace.
-     * @param string the string to replace with.
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [startIndex] is less than zero, greater than the length of this string builder, or `startIndex > endIndex`.
-     *
-     * @return this string builder.
-     */
-    fun replace(startIndex: Int, endIndex: Int, string: String): StringBuilder
-
-    /**
      *  Sets the length of this string builder to the specified [newLength].
      *
      *  If the [newLength] is less than the current length, it is changed to the specified [newLength].
@@ -324,6 +311,19 @@ public expect fun StringBuilder.clear(): StringBuilder
  * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
  */
 public expect operator fun StringBuilder.set(index: Int, value: Char)
+
+/**
+ * Replaces characters in the specified range of this string builder with characters in the specified [string].
+ *
+ * @param startIndex the beginning (inclusive) of the range to replace.
+ * @param endIndex the end (exclusive) of the range to replace.
+ * @param string the string to replace with.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [startIndex] is less than zero, greater than the length of this string builder, or `startIndex > endIndex`.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder
 
 /**
  * Removes the character at the specified [index] from this string builder.

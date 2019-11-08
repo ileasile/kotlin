@@ -183,18 +183,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
-    actual fun replace(startIndex: Int, endIndex: Int, string: String): StringBuilder {
-        if (startIndex < 0 || startIndex > length) {
-            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
-        }
-        if (startIndex > endIndex) {
-            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
-        }
-
-        this.string = this.string.substring(0, startIndex) + string + this.string.substring(endIndex)
-        return this
-    }
-
     actual fun setLength(newLength: Int) {
         if (newLength < 0) {
             throw IllegalArgumentException("Negative new length: $newLength.")
@@ -242,6 +230,18 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         string = string.substring(0, index) + value + string.substring(index + 1)
     }
 
+    public fun setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder {
+        if (startIndex < 0 || startIndex > length) {
+            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
+        }
+        if (startIndex > endIndex) {
+            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
+        }
+
+        this.string = this.string.substring(0, startIndex) + string + this.string.substring(endIndex)
+        return this
+    }
+
     public fun deleteAt(index: Int): StringBuilder {
         AbstractList.checkElementIndex(index, length)
 
@@ -278,6 +278,10 @@ public actual inline fun StringBuilder.clear(): StringBuilder = this.clear()
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline operator fun StringBuilder.set(index: Int, value: Char) = this.set(index, value)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder =
+    this.setRange(startIndex, endIndex, string)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.deleteAt(index: Int): StringBuilder = this.deleteAt(index)

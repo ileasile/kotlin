@@ -374,25 +374,6 @@ class StringBuilderTest {
     }
 
     @Test
-    fun replace() {
-        StringBuilder("my replace test").let { sb ->
-            sb.replace(0, 4, "R")
-            assertEquals("Replace test", sb.toString())
-            sb.replace(7, 7, " empty string")
-            assertEquals("Replace empty string test", sb.toString())
-            sb.replace(20, 25, "")
-            assertEquals("Replace empty string", sb.toString())
-            sb.replace(20, 25, "")
-            assertEquals("Replace empty string", sb.toString())
-
-            assertFails { sb.replace(-1, 0, "") }
-            assertFails { sb.replace(0, -1, "") }
-            assertFails { sb.replace(2, 1, "") }
-            assertFails { sb.replace(sb.length + 1, sb.length + 2, "") }
-        }
-    }
-
-    @Test
     fun setLength() {
         StringBuilder("my setLength test").let { sb ->
             sb.setLength(17)
@@ -445,6 +426,25 @@ class StringBuilderTest {
 
             assertFailsWith<IndexOutOfBoundsException> { sb[-1] = '_' }
             assertFailsWith<IndexOutOfBoundsException> { sb[sb.length] = '_' }
+        }
+    }
+
+    @Test
+    fun setRange() {
+        StringBuilder("my replace test").let { sb ->
+            sb.setRange(0, 4, "R")
+            assertEquals("Replace test", sb.toString())
+            sb.setRange(7, 7, " empty string")
+            assertEquals("Replace empty string test", sb.toString())
+            sb.setRange(20, 25, "")
+            assertEquals("Replace empty string", sb.toString())
+            sb.setRange(20, 25, "")
+            assertEquals("Replace empty string", sb.toString())
+
+            assertFails { sb.setRange(-1, 0, "") }
+            assertFails { sb.setRange(0, -1, "") }
+            assertFails { sb.setRange(2, 1, "") }
+            assertFails { sb.setRange(sb.length + 1, sb.length + 2, "") }
         }
     }
 

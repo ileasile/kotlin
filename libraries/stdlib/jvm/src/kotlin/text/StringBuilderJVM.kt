@@ -14,6 +14,10 @@ package kotlin.text
 @kotlin.internal.InlineOnly
 public actual inline operator fun StringBuilder.set(index: Int, value: Char): Unit = this.setCharAt(index, value)
 
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder =
+    this.replace(startIndex, endIndex, string)
+
 /**
  * Clears the content of this string builder making it empty.
  *
