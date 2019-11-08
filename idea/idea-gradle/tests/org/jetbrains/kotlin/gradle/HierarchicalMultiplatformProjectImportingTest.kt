@@ -36,6 +36,7 @@ class HierarchicalMultiplatformProjectImportingTest : MultiplePluginVersionGradl
     }
 
     @Test
+    @PluginTargetVersions(gradleVersion = "4.0+", pluginVersion = "1.3.50+")
     fun testImportHMPPFlag() {
         configureByFiles()
         importProject()
