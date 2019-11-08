@@ -11,11 +11,11 @@ fun foo(): Boolean {
         private var result = false
 
         fun bar(): Boolean {
-            return <!UNRESOLVED_REFERENCE!>!<!><!INAPPLICABLE_CANDIDATE!>result<!>
+            return !result
         }
 
         // Cannot see private member of local class / anonymous object
-        override fun result() = <!INAPPLICABLE_CANDIDATE!>result<!>
+        override fun result() = result
     }
 
     val some = true

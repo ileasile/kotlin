@@ -439,6 +439,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/privateObjectLiteral.kt");
         }
 
+        @TestMetadata("privateVisibility.kt")
+        public void testPrivateVisibility() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/privateVisibility.kt");
+        }
+
         @TestMetadata("qualifiedExpressions.kt")
         public void testQualifiedExpressions() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/qualifiedExpressions.kt");

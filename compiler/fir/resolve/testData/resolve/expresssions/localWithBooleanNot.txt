@@ -10,11 +10,11 @@ FILE: foo.kt
                 private set(value: R|kotlin/Boolean|): R|kotlin/Unit|
 
             public final fun bar(): R|kotlin/Boolean| {
-                ^bar <Inapplicable(HIDDEN): [/anonymous.result]>#.<Unresolved name: not>#()
+                ^bar R|/anonymous.result|.R|kotlin/Boolean.not|()
             }
 
-            public final override fun result(): <ERROR TYPE REF: Empty diagnostic> {
-                ^result <Inapplicable(HIDDEN): [/anonymous.result]>#
+            public final override fun result(): R|kotlin/Boolean| {
+                ^result R|/anonymous.result|
             }
 
         }
