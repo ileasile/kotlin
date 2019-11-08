@@ -707,7 +707,7 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
                         (candidateDescriptor is PropertyDescriptor && (candidateDescriptor.typeParameters.isNotEmpty() || containsCapturedTypes || containsIntegerLiteralTypes)) ->
                     // this code is very suspicious. Now it is very useful for BE, because they cannot do nothing with captured types,
                     // but it seems like temporary solution.
-                    candidateDescriptor.substitute(resolvedCallAtom.substitutor).substituteAndApproximateCapturedTypes(
+                    candidateDescriptor.substitute(resolvedCallAtom.freshVariablesSubstitutor).substituteAndApproximateCapturedTypes(
                         substitutor ?: FreshVariableNewTypeSubstitutor.Empty, typeApproximator
                     )
                 else ->
@@ -715,7 +715,7 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
             }
         } as D
 
-        typeArguments = resolvedCallAtom.substitutor.freshVariables.map {
+        typeArguments = resolvedCallAtom.freshVariablesSubstitutor.freshVariables.map {
             val substituted = (substitutor ?: FreshVariableNewTypeSubstitutor.Empty).safeSubstitute(it.defaultType)
             typeApproximator
                 .approximateToSuperType(substituted, TypeApproximatorConfiguration.IntegerLiteralsTypesApproximation)
@@ -733,7 +733,8 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
 
         expedtedTypeForSamConvertedArgumentMap = hashMapOf()
         for ((argument, description) in resolvedCallAtom.argumentsWithConversion) {
-            val typeWithFreshVariables = resolvedCallAtom.substitutor.safeSubstitute(description.convertedTypeByCandidateParameter)
+            val typeWithFreshVariables =
+                resolvedCallAtom.freshVariablesSubstitutor.safeSubstitute(description.convertedTypeByCandidateParameter)
             val expectedType = substitutor?.safeSubstitute(typeWithFreshVariables) ?: typeWithFreshVariables
             expedtedTypeForSamConvertedArgumentMap!![argument.psiCallArgument.valueArgument] = expectedType
         }
