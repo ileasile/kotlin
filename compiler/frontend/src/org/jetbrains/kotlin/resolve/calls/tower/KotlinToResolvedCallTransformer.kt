@@ -26,6 +26,7 @@ import org.jetbrains.kotlin.resolve.calls.context.CallPosition
 import org.jetbrains.kotlin.resolve.calls.inference.buildResultingSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.FreshVariableNewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutor
+import org.jetbrains.kotlin.resolve.calls.inference.components.composeWith
 import org.jetbrains.kotlin.resolve.calls.inference.model.*
 import org.jetbrains.kotlin.resolve.calls.inference.substitute
 import org.jetbrains.kotlin.resolve.calls.inference.substituteAndApproximateCapturedTypes
@@ -727,10 +728,13 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
         }
 
     private fun CallableDescriptor.substituteInferredVariablesAndApproximate(substitutor: NewTypeSubstitutor?): CallableDescriptor {
-        return substitute(resolvedCallAtom.freshVariablesSubstitutor)
-            .substituteAndApproximateCapturedTypes(
-                substitutor ?: FreshVariableNewTypeSubstitutor.Empty, typeApproximator
-            )
+        val inferredTypeVariablesSubstitutor = substitutor ?: FreshVariableNewTypeSubstitutor.Empty
+
+        val compositeSubstitutor = resolvedCallAtom.freshVariablesSubstitutor
+            .composeWith(resolvedCallAtom.knownParametersSubstitutor)
+            .composeWith(inferredTypeVariablesSubstitutor)
+
+        return substituteAndApproximateCapturedTypes(compositeSubstitutor, typeApproximator)
     }
 
     fun getExpectedTypeForSamConvertedArgument(valueArgument: ValueArgument): UnwrappedType? =
