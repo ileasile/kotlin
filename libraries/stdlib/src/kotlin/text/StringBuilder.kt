@@ -205,6 +205,9 @@ expect class StringBuilder : Appendable, CharSequence {
      *  If the [newLength] is less than the current length, it is changed to the specified [newLength].
      *  Otherwise, null characters '\u0000' are appended to this string builder until its length is less than the [newLength].
      *
+     *  Note that in Kotlin/JS [set] operator function has non-constant execution time complexity.
+     *  Therefore, increasing length of this string builder and then updating each character by index may slow down your program.
+     *
      *  @throws IndexOutOfBoundsException or [IllegalArgumentException] if [newLength] is less than zero.
      */
     fun setLength(newLength: Int)
