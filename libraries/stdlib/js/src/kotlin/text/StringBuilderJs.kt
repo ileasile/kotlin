@@ -68,8 +68,9 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
+    @UseExperimental(ExperimentalStdlibApi::class)
     actual fun append(chars: CharArray): StringBuilder {
-        string += String(chars)
+        string += chars.concatToString()
         return this
     }
 
@@ -111,10 +112,11 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
+    @UseExperimental(ExperimentalStdlibApi::class)
     actual fun insert(index: Int, chars: CharArray): StringBuilder {
         AbstractList.checkPositionIndex(index, length)
 
-        string = string.substring(0, index) + String(chars) + string.substring(index)
+        string = string.substring(0, index) + chars.concatToString() + string.substring(index)
         return this
     }
 
@@ -155,11 +157,13 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
 
     actual fun substring(startIndex: Int): String {
         AbstractList.checkPositionIndex(startIndex, length)
+
         return string.substring(startIndex)
     }
 
     actual fun substring(startIndex: Int, endIndex: Int): String {
         AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
+
         return string.substring(startIndex, endIndex)
     }
 
@@ -187,12 +191,7 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
     }
 
     public fun setRange(startIndex: Int, endIndex: Int, string: String): StringBuilder {
-        if (startIndex < 0 || startIndex > length) {
-            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
-        }
-        if (startIndex > endIndex) {
-            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
-        }
+        AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
 
         this.string = this.string.substring(0, startIndex) + string + this.string.substring(endIndex)
         return this
@@ -206,12 +205,7 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
     }
 
     public fun deleteRange(startIndex: Int, endIndex: Int): StringBuilder {
-        if (startIndex < 0 || startIndex > length) {
-            throw IndexOutOfBoundsException("startIndex: $startIndex, length: $length")
-        }
-        if (startIndex > endIndex) {
-            throw IllegalArgumentException("startIndex($startIndex) > endIndex($endIndex)")
-        }
+        AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
 
         string = string.substring(0, startIndex) + string.substring(endIndex)
         return this
@@ -219,13 +213,7 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
 
     public fun toCharArray(destination: CharArray, destinationOffset: Int, startIndex: Int, endIndex: Int) {
         AbstractList.checkBoundsIndexes(startIndex, endIndex, length)
-
-        if (destinationOffset < 0 || destinationOffset >= destination.size) {
-            throw IndexOutOfBoundsException("Destination offset: $destinationOffset, size: ${destination.size}")
-        }
-        if (destinationOffset + endIndex - startIndex > destination.size) {
-            throw IndexOutOfBoundsException("Subrange size: ${endIndex - startIndex}, destination offset: $destinationOffset, size: ${destination.size}")
-        }
+        AbstractList.checkBoundsIndexes(destinationOffset, destinationOffset + endIndex - startIndex, destination.size)
 
         var dstIndex = destinationOffset
         for (index in startIndex until endIndex) {
@@ -233,21 +221,25 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         }
     }
 
+    @UseExperimental(ExperimentalStdlibApi::class)
     public fun appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder {
-        string += String(chars, startIndex, endIndex - startIndex)
+        string += chars.concatToString(startIndex, endIndex)
         return this
     }
 
     public fun appendRange(csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder {
-        string += csq.toString().substring(startIndex, endIndex)
+        val stringCsq = csq.toString()
+        AbstractList.checkBoundsIndexes(startIndex, endIndex, stringCsq.length)
+
+        string += stringCsq.substring(startIndex, endIndex)
         return this
     }
 
+    @UseExperimental(ExperimentalStdlibApi::class)
     public fun insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder {
         AbstractList.checkPositionIndex(index, this.length)
-        AbstractList.checkBoundsIndexes(startIndex, endIndex, chars.size)
 
-        string = string.substring(0, index) + String(chars, startIndex, endIndex - startIndex) + string.substring(index)
+        string = string.substring(0, index) + chars.concatToString(startIndex, endIndex) + string.substring(index)
         return this
     }
 
@@ -255,7 +247,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         AbstractList.checkPositionIndex(index, length)
 
         val stringCsq = csq.toString()
-
         AbstractList.checkBoundsIndexes(startIndex, endIndex, stringCsq.length)
 
         string = string.substring(0, index) + stringCsq.substring(startIndex, endIndex) + string.substring(index)
