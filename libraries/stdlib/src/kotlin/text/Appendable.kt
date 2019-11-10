@@ -36,10 +36,11 @@ expect interface Appendable {
      * @param start the beginning (inclusive) of the subsequence to append.
      * @param end the end (exclusive) of the subsequence to append.
      *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [start] is negative, [end] is greater than the length of this Appendable, or `start > end`.
+     * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [start] or [end] is out of range of the [csq] character sequence indices or when `start > end`.
      *
      * @return this Appendable.
      */
+    @Deprecated("", level = DeprecationLevel.ERROR)
     fun append(csq: CharSequence?, start: Int, end: Int): Appendable
 }
 

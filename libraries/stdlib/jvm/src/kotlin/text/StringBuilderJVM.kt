@@ -41,8 +41,16 @@ public actual inline fun StringBuilder.appendRange(chars: CharArray, startIndex:
     this.append(chars, startIndex, endIndex - startIndex)
 
 @kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.appendRange(csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder =
+    this.append(csq, startIndex, endIndex)
+
+@kotlin.internal.InlineOnly
 public actual inline fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
     this.insert(index, chars, startIndex, endIndex - startIndex)
+
+@kotlin.internal.InlineOnly
+public actual inline fun StringBuilder.insertRange(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder =
+    this.insert(index, csq, startIndex, endIndex)
 
 
 private object SystemProperties {

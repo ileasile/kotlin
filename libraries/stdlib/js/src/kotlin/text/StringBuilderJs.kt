@@ -5,12 +5,6 @@
 
 package kotlin.text
 
-public actual interface Appendable {
-    public actual fun append(csq: CharSequence?): Appendable
-    public actual fun append(csq: CharSequence?, start: Int, end: Int): Appendable
-    public actual fun append(c: Char): Appendable
-}
-
 public actual class StringBuilder actual constructor(content: String) : Appendable, CharSequence {
     actual constructor(capacity: Int) : this() {
         _capacity = capacity
@@ -41,10 +35,8 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
-    actual override fun append(csq: CharSequence?, start: Int, end: Int): StringBuilder {
-        string += csq.toString().substring(start, end)
-        return this
-    }
+    @Deprecated("Use appendRange instead", ReplaceWith("appendRange(csq, start, end)"), DeprecationLevel.WARNING)
+    actual override fun append(csq: CharSequence?, start: Int, end: Int): StringBuilder = this.appendRange(csq, start, end)
 
     actual fun reverse(): StringBuilder {
         var reversed = ""
@@ -130,17 +122,6 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         AbstractList.checkPositionIndex(index, length)
 
         string = string.substring(0, index) + csq.toString() + string.substring(index)
-        return this
-    }
-
-    actual fun insert(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder {
-        AbstractList.checkPositionIndex(index, length)
-
-        val stringCsq = csq.toString()
-
-        AbstractList.checkBoundsIndexes(startIndex, endIndex, stringCsq.length)
-
-        string = string.substring(0, index) + stringCsq.substring(startIndex, endIndex) + string.substring(index)
         return this
     }
 
@@ -257,11 +238,27 @@ public actual class StringBuilder actual constructor(content: String) : Appendab
         return this
     }
 
+    public fun appendRange(csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder {
+        string += csq.toString().substring(startIndex, endIndex)
+        return this
+    }
+
     public fun insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder {
         AbstractList.checkPositionIndex(index, this.length)
         AbstractList.checkBoundsIndexes(startIndex, endIndex, chars.size)
 
         string = string.substring(0, index) + String(chars, startIndex, endIndex - startIndex) + string.substring(index)
+        return this
+    }
+
+    public fun insertRange(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder {
+        AbstractList.checkPositionIndex(index, length)
+
+        val stringCsq = csq.toString()
+
+        AbstractList.checkBoundsIndexes(startIndex, endIndex, stringCsq.length)
+
+        string = string.substring(0, index) + stringCsq.substring(startIndex, endIndex) + string.substring(index)
         return this
     }
 }
@@ -298,5 +295,13 @@ public actual inline fun StringBuilder.appendRange(chars: CharArray, startIndex:
     this.appendRange(chars, startIndex, endIndex)
 
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.appendRange(csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder =
+    this.appendRange(csq, startIndex, endIndex)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder =
     this.insertRange(index, chars, startIndex, endIndex)
+
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public actual inline fun StringBuilder.insertRange(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder =
+    this.insertRange(index, csq, startIndex, endIndex)

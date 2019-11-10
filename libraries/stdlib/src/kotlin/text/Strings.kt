@@ -442,9 +442,9 @@ public fun CharSequence.replaceRange(startIndex: Int, endIndex: Int, replacement
     if (endIndex < startIndex)
         throw IndexOutOfBoundsException("End index ($endIndex) is less than start index ($startIndex).")
     val sb = StringBuilder()
-    sb.append(this, 0, startIndex)
+    sb.appendRange(this, 0, startIndex)
     sb.append(replacement)
-    sb.append(this, endIndex, length)
+    sb.appendRange(this, endIndex, length)
     return sb
 }
 
@@ -491,8 +491,8 @@ public fun CharSequence.removeRange(startIndex: Int, endIndex: Int): CharSequenc
         return this.subSequence(0, length)
 
     val sb = StringBuilder(length - (endIndex - startIndex))
-    sb.append(this, 0, startIndex)
-    sb.append(this, endIndex, length)
+    sb.appendRange(this, 0, startIndex)
+    sb.appendRange(this, endIndex, length)
     return sb
 }
 

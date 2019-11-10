@@ -34,6 +34,7 @@ expect class StringBuilder : Appendable, CharSequence {
 
     override fun append(c: Char): StringBuilder
     override fun append(csq: CharSequence?): StringBuilder
+    @Deprecated("Use appendRange instead", ReplaceWith("appendRange(csq, start, end)"), DeprecationLevel.ERROR)
     override fun append(csq: CharSequence?, start: Int, end: Int): StringBuilder
 
     /**
@@ -178,24 +179,6 @@ expect class StringBuilder : Appendable, CharSequence {
     fun insert(index: Int, csq: CharSequence?): StringBuilder
 
     /**
-     * Inserts characters in a subsequence of the specified character sequence [csq] into this string builder at the specified [index].
-     *
-     * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
-     *
-     * @param index the position in this string builder to insert at.
-     * @param csq the character sequence from which a subsequence is inserted. If [csq] is `null`,
-     *  then characters will be inserted as if [csq] contained the four characters `"null"`.
-     * @param startIndex the beginning (inclusive) of the subsequence to insert.
-     * @param endIndex the end (exclusive) of the subsequence to insert.
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [csq] character sequence indices or when `startIndex > endIndex`.
-     * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
-     *
-     * @return this string builder.
-     */
-    fun insert(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder
-
-    /**
      * Inserts the string representation of the specified [obj] object into this string builder at the specified [index].
      *
      * The overall effect is exactly as if the [obj] were converted to a string by the `obj.toString()` method,
@@ -298,7 +281,7 @@ public expect fun StringBuilder.deleteAt(index: Int): StringBuilder
  * @param startIndex the beginning (inclusive) of the range to remove.
  * @param endIndex the end (exclusive) of the range to remove.
  *
- * @throws IndexOutOfBoundsException or [IllegalArgumentException] if [startIndex] is negative, greater than the length of this string builder, or `startIndex > endIndex`.
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of this string builder indices or when `startIndex > endIndex`.
  *
  * @return this string builder.
  */
@@ -334,6 +317,20 @@ public expect fun StringBuilder.toCharArray(destination: CharArray, destinationO
 public expect fun StringBuilder.appendRange(chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder
 
 /**
+ * Appends a subsequence of the specified character sequence [csq] to this string builder.
+ *
+ * @param csq the character sequence from which a subsequence is appended. If [csq] is `null`,
+ *  then characters are appended as if [csq] contained the four characters `"null"`.
+ * @param startIndex the beginning (inclusive) of the subsequence to append.
+ * @param endIndex the end (exclusive) of the subsequence to append.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [csq] character sequence indices or when `startIndex > endIndex`.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.appendRange(csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder
+
+/**
  * Inserts characters in a subarray of the specified [chars] array into this string builder at the specified [index].
  *
  * The inserted characters go in same order as in the [chars] array, starting at [index].
@@ -349,6 +346,24 @@ public expect fun StringBuilder.appendRange(chars: CharArray, startIndex: Int, e
  * @return this string builder.
  */
 public expect fun StringBuilder.insertRange(index: Int, chars: CharArray, startIndex: Int, endIndex: Int): StringBuilder
+
+/**
+ * Inserts characters in a subsequence of the specified character sequence [csq] into this string builder at the specified [index].
+ *
+ * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
+ *
+ * @param index the position in this string builder to insert at.
+ * @param csq the character sequence from which a subsequence is inserted. If [csq] is `null`,
+ *  then characters will be inserted as if [csq] contained the four characters `"null"`.
+ * @param startIndex the beginning (inclusive) of the subsequence to insert.
+ * @param endIndex the end (exclusive) of the subsequence to insert.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [startIndex] or [endIndex] is out of range of the [csq] character sequence indices or when `startIndex > endIndex`.
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ *
+ * @return this string builder.
+ */
+public expect fun StringBuilder.insertRange(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder
 
 /**
  * Builds new string by populating newly created [StringBuilder] using provided [builderAction]

@@ -28,7 +28,7 @@ class StringBuilderTest {
     @Test fun append() {
         // this test is needed for JS implementation
         assertEquals("em", buildString {
-            append("element", 2, 4)
+            appendRange("element", 2, 4)
         })
     }
 
@@ -339,16 +339,16 @@ class StringBuilderTest {
             assertEquals("MMMmy insert CharSequence test", sb.toString())
             sb.insert(12, StringBuilder("T"))
             assertEquals("MMMmy insertT CharSequence test", sb.toString())
-            sb.insert(31, "_*#", 0, 1)
+            sb.insertRange(31, "_*#", 0, 1)
             assertEquals("MMMmy insertT CharSequence test_", sb.toString())
-            sb.insert(0, null as CharSequence?, 0, 2)
+            sb.insertRange(0, null as CharSequence?, 0, 2)
             assertEquals("nuMMMmy insertT CharSequence test_", sb.toString())
 
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(-1, "_" as CharSequence) }
             assertFailsWith<IndexOutOfBoundsException> { sb.insert(sb.length + 1, StringBuilder("_")) }
-            assertFails { sb.insert(0, null as CharSequence?, -1, 0) }
-            assertFails { sb.insert(0, null as CharSequence?, 0, 5) }
-            assertFails { sb.insert(0, null as CharSequence?, 2, 1) }
+            assertFails { sb.insertRange(0, null as CharSequence?, -1, 0) }
+            assertFails { sb.insertRange(0, null as CharSequence?, 0, 5) }
+            assertFails { sb.insertRange(0, null as CharSequence?, 2, 1) }
         }
     }
 
