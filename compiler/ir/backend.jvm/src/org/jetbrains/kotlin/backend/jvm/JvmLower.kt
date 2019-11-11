@@ -184,15 +184,11 @@ private val syntheticAccessorPhase = makeIrFilePhase(
     prerequisite = setOf(objectClassPhase, staticDefaultFunctionPhase, interfacePhase)
 )
 
-private val mainMethodGenerationPhase = makeIrFilePhase(
-    ::MainMethodGenerationLowering,
-    name = "MainMethodGeneration",
-    description = "Identify parameterless main methods and generate bridge main-methods"
-)
-
 @Suppress("Reformat")
 private val jvmFilePhases =
+        jvmOverloadsAnnotationPhase then
         mainMethodGenerationPhase then
+
         typeAliasAnnotationMethodsPhase then
         stripTypeAliasDeclarationsPhase then
         provisionalFunctionExpressionPhase then
@@ -230,7 +226,6 @@ private val jvmFilePhases =
         returnableBlocksPhase then
         localDeclarationsPhase then
 
-        jvmOverloadsAnnotationPhase then
         jvmDefaultConstructorPhase then
 
         forLoopsPhase then
