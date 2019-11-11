@@ -21,14 +21,17 @@ import com.intellij.find.FindManager
 import com.intellij.find.findUsages.AbstractFindUsagesDialog
 import com.intellij.find.findUsages.FindUsagesOptions
 import com.intellij.find.impl.FindManagerImpl
-import com.intellij.notification.Notification
-import com.intellij.notification.NotificationListener
-import com.intellij.notification.NotificationType
+import com.intellij.icons.AllIcons.Actions
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.ToolWindowId
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.search.SearchScope
@@ -62,9 +65,10 @@ import org.jetbrains.kotlin.idea.util.application.runReadAction
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.findOriginalTopMostOverriddenDescriptors
 import org.jetbrains.kotlin.resolve.source.getPsi
-import java.util.*
 import javax.swing.event.HyperlinkEvent
-import kotlin.concurrent.schedule
+import javax.swing.event.HyperlinkListener
+import com.intellij.openapi.util.Key
+import com.intellij.usageView.UsageViewContentManager
 
 abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected constructor(
     declaration: T,
@@ -112,7 +116,7 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
     }
 
     private class Property(
-        private val propertyDeclaration: KtNamedDeclaration,
+        propertyDeclaration: KtNamedDeclaration,
         elementsToSearch: Collection<PsiElement>,
         factory: KotlinFindUsagesHandlerFactory
     ) : KotlinFindMemberUsagesHandler<KtNamedDeclaration>(propertyDeclaration, elementsToSearch, factory) {
@@ -121,7 +125,7 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
 
             if (ApplicationManager.getApplication().isUnitTestMode ||
                 !isPropertyOfDataClass ||
-                KotlinFindPropertyUsagesDialog.getDisableComponentAndDestructionSearch(psiElement.project)
+                psiElement.getDisableComponentAndDestructionSearch(resetSingleFind = false)
             ) return super.processElementUsages(element, processor, options)
 
             val indicator = ProgressManager.getInstance().progressIndicator
@@ -130,7 +134,16 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
             try {
                 return super.processElementUsages(element, processor, options)
             } finally {
-                notificationCanceller()
+                Disposer.dispose(notificationCanceller)
+//                if (!indicator.isCanceled) {
+//                    ApplicationManager.getApplication().invokeLater {
+//                        ToolWindowManager.getInstance(project).notifyByBalloon(
+//                            ToolWindowId.FIND,
+//                            MessageType.WARNING,
+//                            "trololo<a href=\"sasasa\">ksksks</a>"
+//                        )
+//                    }
+//                }
             }
         }
 
@@ -181,14 +194,18 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
             return result
         }
 
-        private fun PsiElement.getDisableComponentAndDestructionSearchOnesAndReset(): Boolean {
+        private fun PsiElement.getDisableComponentAndDestructionSearch(resetSingleFind: Boolean): Boolean {
+
+            if (!isPropertyOfDataClass) return false
 
             if (forceDisableComponentAndDestructionSearch) return true
 
             if (KotlinFindPropertyUsagesDialog.getDisableComponentAndDestructionSearch(project)) return true
 
-            return if (getUserData(FIND_USAGES_ONES_KEY) == true) {
-                putUserData(FIND_USAGES_ONES_KEY, null)
+            return if (getUserData(FIND_USAGES_ONES_FOR_DATA_CLASS_KEY) == true) {
+                if (resetSingleFind) {
+                    putUserData(FIND_USAGES_ONES_FOR_DATA_CLASS_KEY, null)
+                }
                 true
             } else false
         }
@@ -198,7 +215,7 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
             val kotlinOptions = options as KotlinPropertyFindUsagesOptions
 
             val disabledComponentsAndOperatorsSearch =
-                !forHighlight && isPropertyOfDataClass && psiElement.getDisableComponentAndDestructionSearchOnesAndReset()
+                !forHighlight && psiElement.getDisableComponentAndDestructionSearch(resetSingleFind = true)
 
             return KotlinReferencesSearchOptions(
                 acceptCallableOverrides = true,
@@ -304,51 +321,44 @@ abstract class KotlinFindMemberUsagesHandler<T : KtNamedDeclaration> protected c
         @get:TestOnly
         var forceDisableComponentAndDestructionSearch = false
 
-        private const val DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TITLE = "Find usages can be faster in not precise mode"
+
         private const val DISABLE_ONCE = "DISABLE_ONCE"
         private const val DISABLE = "DISABLE"
         private const val DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TEXT =
-            "<p>Find usages for data class components and destruction declaration could be <a href=\"$DISABLE_ONCE\">disabled once</a> or <a href=\"$DISABLE\">disabled</a> for a project.</p>"
-        private const val DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TIMEOUT = 5000L
+            "<p>Find usages for data class components and destruction declaration<br/>could be <a href=\"$DISABLE_ONCE\">disabled once</a> or <a href=\"$DISABLE\">disabled</a> for a project.</p>"
+        private const val DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TIMEOUT = 5000
 
-        private val FIND_USAGES_ONES_KEY = com.intellij.openapi.util.Key<Boolean>("FIND_USAGES_ONES")
+        private val FIND_USAGES_ONES_FOR_DATA_CLASS_KEY = Key<Boolean>("FIND_USAGES_ONES")
 
         private fun scheduleNotificationForDataClassComponent(
             project: Project,
             element: PsiElement,
             indicator: ProgressIndicator
-        ): () -> Unit {
-            val notification = lazy {
-                val listener = NotificationListener { notification, event ->
+        ): Disposable {
+            val notification = {
+                val listener = HyperlinkListener { event ->
                     if (event.eventType == HyperlinkEvent.EventType.ACTIVATED) {
-                        notification.expire()
                         indicator.cancel()
                         if (event.description == DISABLE) {
                             KotlinFindPropertyUsagesDialog.setDisableComponentAndDestructionSearch(project, /* value = */ true)
                         } else {
-                            element.putUserData(FIND_USAGES_ONES_KEY, true)
+                            element.putUserData(FIND_USAGES_ONES_FOR_DATA_CLASS_KEY, true)
                         }
                         FindManager.getInstance(project).findUsages(element)
-
                     }
                 }
-                Notification(
-                    DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TITLE,
-                    DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TITLE,
+
+                ToolWindowManager.getInstance(project).notifyByBalloon(
+                    ToolWindowId.FIND,
+                    MessageType.INFO,
                     DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TEXT,
-                    NotificationType.INFORMATION,
+                    Actions.Find,
                     listener
                 )
             }
 
-            val timer = Timer(false).schedule(DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TIMEOUT) {
-                cancel()
-                notification.value.notify(project)
-            }
-
-            return {
-                timer.cancel();
-                if (notification.isInitialized() && !notification.value.isExpired) notification.value.expire()
+            return Alarm().also {
+                it.addRequest(notification, DISABLE_COMPONENT_AND_DESTRUCTION_SEARCH_TIMEOUT)
             }
         }
 
