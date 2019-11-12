@@ -188,13 +188,13 @@ abstract class KmPackageVisitor @JvmOverloads constructor(delegate: KmPackageVis
 abstract class KmPackageFragmentVisitor @JvmOverloads constructor(private val delegate: KmPackageFragmentVisitor? = null) {
 
     /**
-     * Visits package within the package fragment.
+     * Visits a package within the package fragment.
      */
     open fun visitPackage(): KmPackageVisitor? =
         delegate?.visitPackage()
 
     /**
-     * Visits class within package fragment.
+     * Visits a class within the package fragment.
      */
     open fun visitClass(): KmClassVisitor? =
         delegate?.visitClass()

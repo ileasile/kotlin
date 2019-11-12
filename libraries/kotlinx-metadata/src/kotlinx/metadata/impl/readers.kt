@@ -17,21 +17,16 @@ import org.jetbrains.kotlin.metadata.deserialization.Flags as F
  */
 interface ReadContextExtension
 
-open class BasicReadContext(
-    val strings: NameResolver,
-    val contextExtensions: List<ReadContextExtension> = emptyList()
-) {
-    internal val extensions = MetadataExtensions.INSTANCES
-}
-
 class ReadContext(
-    strings: NameResolver,
+    val strings: NameResolver,
     val types: TypeTable,
     internal val versionRequirements: VersionRequirementTable,
     private val parent: ReadContext? = null,
-    contextExtensions: List<ReadContextExtension> = emptyList()
-) : BasicReadContext(strings, contextExtensions) {
+    val contextExtensions: List<ReadContextExtension> = emptyList()
+) {
     private val typeParameterNameToId = mutableMapOf<Int, Int>()
+
+    internal val extensions = MetadataExtensions.INSTANCES
 
     operator fun get(index: Int): String =
         strings.getString(index)
@@ -134,7 +129,12 @@ fun ProtoBuf.PackageFragment.accept(
     strings: NameResolver,
     contextExtensions: List<ReadContextExtension> = emptyList()
 ) {
-    val c = BasicReadContext(strings, contextExtensions)
+    val c = ReadContext(
+        strings,
+        TypeTable(ProtoBuf.TypeTable.newBuilder().build()),
+        VersionRequirementTable.EMPTY,
+        contextExtensions = contextExtensions
+    )
 
     v.visitPackage()?.let { `package`.accept(it, strings, contextExtensions) }
 

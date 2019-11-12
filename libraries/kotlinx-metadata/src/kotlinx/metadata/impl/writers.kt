@@ -487,30 +487,24 @@ open class PackageWriter(stringTable: StringTable, contextExtensions: List<Write
     }
 }
 
-private fun createPackageWriter(c: WriteContext, output: (ProtoBuf.Package.Builder) -> Unit): KmPackageVisitor =
-    object : PackageWriter(c.strings, c.contextExtensions) {
-        override fun visitEnd() {
-            super.visitEnd()
-            output(t)
-        }
-    }
-
-private fun createClassWriter(c: WriteContext, output: (ProtoBuf.Class.Builder) -> Unit): KmClassVisitor =
-    object : ClassWriter(c.strings, c.contextExtensions) {
-        override fun visitEnd() {
-            super.visitEnd()
-            output(t)
-        }
-    }
-
 open class PackageFragmentWriter(stringTable: StringTable, contextExtensions: List<WriteContextExtension> = emptyList()) :
     KmPackageFragmentVisitor() {
     protected val t = ProtoBuf.PackageFragment.newBuilder()
     protected val c: WriteContext = WriteContext(stringTable, contextExtensions)
 
-    override fun visitPackage(): KmPackageVisitor? = createPackageWriter(c) { t.setPackage(it) }
+    override fun visitPackage(): KmPackageVisitor? = object : PackageWriter(c.strings, c.contextExtensions) {
+        override fun visitEnd() {
+            super.visitEnd()
+            this@PackageFragmentWriter.t.setPackage(t)
+        }
+    }
 
-    override fun visitClass(): KmClassVisitor? = createClassWriter(c) { t.addClass_(it) }
+    override fun visitClass(): KmClassVisitor? = object : ClassWriter(c.strings, c.contextExtensions) {
+        override fun visitEnd() {
+            super.visitEnd()
+            this@PackageFragmentWriter.t.addClass_(t)
+        }
+    }
 
     override fun visitExtensions(type: KmExtensionType): KmPackageFragmentExtensionVisitor? =
         applySingleExtension(type) {

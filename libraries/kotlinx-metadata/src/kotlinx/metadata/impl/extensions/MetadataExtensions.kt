@@ -6,7 +6,6 @@
 package kotlinx.metadata.impl.extensions
 
 import kotlinx.metadata.*
-import kotlinx.metadata.impl.BasicReadContext
 import kotlinx.metadata.impl.ReadContext
 import kotlinx.metadata.impl.WriteContext
 import org.jetbrains.kotlin.metadata.ProtoBuf
@@ -17,7 +16,7 @@ interface MetadataExtensions {
 
     fun readPackageExtensions(v: KmPackageVisitor, proto: ProtoBuf.Package, c: ReadContext)
 
-    fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: BasicReadContext)
+    fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: ReadContext)
 
     fun readFunctionExtensions(v: KmFunctionVisitor, proto: ProtoBuf.Function, c: ReadContext)
 

@@ -6,11 +6,10 @@
 package kotlinx.metadata.klib.impl
 
 import kotlinx.metadata.impl.ReadContextExtension
-import kotlinx.metadata.klib.SourceFileIndex
 import kotlinx.metadata.klib.KlibSourceFile
 
 class SourceFileIndexReadExtension(
     private val files: List<KlibSourceFile>
-) : SourceFileIndex, ReadContextExtension {
-    override fun getSourceFile(index: Int): KlibSourceFile = files[index]
+) : ReadContextExtension {
+    fun getSourceFile(index: Int): KlibSourceFile = files[index]
 }

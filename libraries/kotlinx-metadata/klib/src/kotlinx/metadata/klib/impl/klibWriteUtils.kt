@@ -5,19 +5,21 @@
 
 package kotlinx.metadata.klib.impl
 
+import kotlinx.metadata.impl.WriteContext
 import kotlinx.metadata.klib.KlibHeader
 import kotlinx.metadata.klib.KlibSourceFile
 import kotlinx.metadata.klib.UniqId
 import org.jetbrains.kotlin.library.metadata.KlibMetadataProtoBuf
+import org.jetbrains.kotlin.serialization.StringTableImpl
 
 internal fun UniqId.writeUniqId(): KlibMetadataProtoBuf.DescriptorUniqId.Builder =
     KlibMetadataProtoBuf.DescriptorUniqId.newBuilder().apply {
         index = this@writeUniqId.index
     }
 
-internal fun KlibHeader.writeHeader(): KlibMetadataProtoBuf.Header.Builder =
+internal fun KlibHeader.writeHeader(context: WriteContext): KlibMetadataProtoBuf.Header.Builder =
     KlibMetadataProtoBuf.Header.newBuilder().also { proto ->
-        val (strings, qualifiedNames) = stringTable.buildProto()
+        val (strings, qualifiedNames) = (context.strings as StringTableImpl).buildProto()
         proto.qualifiedNames = qualifiedNames
         proto.strings = strings
         proto.addAllPackageFragmentName(packageFragmentName)

@@ -19,7 +19,7 @@ import org.jetbrains.kotlin.serialization.StringTableImpl
 
 internal class KlibMetadataExtensions : MetadataExtensions {
 
-    private fun BasicReadContext.getSourceFile(index: Int) =
+    private fun ReadContext.getSourceFile(index: Int) =
         contextExtensions.filterIsInstance<SourceFileIndexReadExtension>().first().getSourceFile(index)
 
     private fun WriteContext.getIndexOf(file: KlibSourceFile) =
@@ -48,7 +48,7 @@ internal class KlibMetadataExtensions : MetadataExtensions {
         }
     }
 
-    override fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: BasicReadContext) {
+    override fun readPackageFragmentExtensions(v: KmPackageFragmentVisitor, proto: ProtoBuf.PackageFragment, c: ReadContext) {
         val extension = v.visitExtensions(KlibPackageFragmentExtensionVisitor.TYPE) as? KlibPackageFragmentExtensionVisitor ?: return
 
         proto.getExtension(KlibMetadataProtoBuf.packageFragmentFiles)

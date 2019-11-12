@@ -9,10 +9,3 @@ class KlibSourceFile(
     val name: String
 )
 
-internal interface SourceFileIndex {
-    fun getSourceFile(index: Int): KlibSourceFile
-}
-
-internal interface ReverseSourceFileIndex {
-    fun getIndexOf(file: KlibSourceFile): Int
-}

@@ -7,11 +7,10 @@ package kotlinx.metadata.klib.impl
 
 import kotlinx.metadata.impl.*
 import kotlinx.metadata.klib.KlibSourceFile
-import kotlinx.metadata.klib.ReverseSourceFileIndex
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataStringTable
 import org.jetbrains.kotlin.metadata.ProtoBuf
 
-class ReverseSourceFileIndexWriteExtension : ReverseSourceFileIndex, WriteContextExtension {
+class ReverseSourceFileIndexWriteExtension : WriteContextExtension {
     private val filesReverseIndex = mutableMapOf<KlibSourceFile, Int>()
 
     val fileIndex: List<KlibSourceFile>
@@ -20,15 +19,15 @@ class ReverseSourceFileIndexWriteExtension : ReverseSourceFileIndex, WriteContex
             .sortedBy { it.first }
             .map { it.second }
 
-    override fun getIndexOf(file: KlibSourceFile): Int = filesReverseIndex.getOrPut(file) {
+    fun getIndexOf(file: KlibSourceFile): Int = filesReverseIndex.getOrPut(file) {
         filesReverseIndex.size
     }
 }
 
 class KlibPackageFragmentWriter(
     stringTable: KlibMetadataStringTable,
-    reverseSourceFileIndexWriteExtension: ReverseSourceFileIndexWriteExtension
-) : PackageFragmentWriter(stringTable, listOf(reverseSourceFileIndexWriteExtension)) {
+    contextExtensions: List<WriteContextExtension> = emptyList()
+) : PackageFragmentWriter(stringTable, contextExtensions) {
 
     fun write(): ProtoBuf.PackageFragment =
         t.build()

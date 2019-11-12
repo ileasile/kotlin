@@ -6,6 +6,7 @@
 package kotlinx.metadata.klib
 
 import kotlinx.metadata.KmPackageFragment
+import kotlinx.metadata.impl.WriteContext
 import kotlinx.metadata.impl.accept
 import kotlinx.metadata.klib.impl.*
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataStringTable
@@ -17,48 +18,87 @@ import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.metadata.deserialization.NameResolverImpl
 
 /**
- * Represents Kotlin package that is split into several [KmPackageFragment].
- * Splitting allows to boost performance when dealing with a huge package.
+ * Allows to modify the way fragments of the single package are read by [KlibMetadata.read].
+ * For example, it may be convenient to join fragments into a single one.
  */
-data class KlibFragmentedPackage(
-    val fqName: String,
-    val fragments: List<KmPackageFragment>
-)
+interface KlibPackageFragmentReadStrategy {
+    fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<Pair<String, KmPackageFragment>>
+
+    companion object {
+        val DEFAULT = object : KlibPackageFragmentReadStrategy {
+            override fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>) =
+                parts.map { packageFqName to it }
+        }
+    }
+}
+
+/**
+ * Allows to modify the way package fragments are written by [KlibMetadata.write].
+ * For example, splitting big fragments into several small one allows to improve IDE performance.
+ */
+interface KlibPackageFragmentWriteStrategy {
+    fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<KmPackageFragment>
+
+    companion object {
+        val DEFAULT = object : KlibPackageFragmentWriteStrategy {
+            override fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<KmPackageFragment> =
+                parts
+        }
+    }
+}
 
 /**
  * Represents the parsed metadata of KLIB.
  */
-class KlibMetadata(
-    val stringTable: KlibMetadataStringTable,
-    val fragmentedPackageFragments: List<KlibFragmentedPackage>
-) {
+class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragment>>) {
 
     companion object {
-        fun read(library: MetadataLibrary): KlibMetadata {
+        /**
+         * Deserializes metadata from the given [library].
+         * @param readStrategy specifies the way package fragments of a single package are modified (e.g. merged) after deserialization.
+         */
+        // TODO: exposes MetadataLibrary which is internal!
+        fun read(
+            library: MetadataLibrary,
+            readStrategy: KlibPackageFragmentReadStrategy = KlibPackageFragmentReadStrategy.DEFAULT
+        ): KlibMetadata {
             val moduleHeaderProto = parseModuleHeader(library.moduleHeaderData)
             val moduleHeader = moduleHeaderProto.readHeader()
             val nameResolver = NameResolverImpl(moduleHeaderProto.strings, moduleHeaderProto.qualifiedNames)
             val fileIndex = SourceFileIndexReadExtension(moduleHeader.file)
-            val packageFragments = moduleHeader.packageFragmentName.map { packageFqName ->
-                val fragments = library.packageMetadataParts(packageFqName).map { part ->
+            val packageFragments = moduleHeader.packageFragmentName.flatMap { packageFqName ->
+                library.packageMetadataParts(packageFqName).map { part ->
                     val packageFragment = parsePackageFragment(library.packageMetadata(packageFqName, part))
                     KmPackageFragment().apply { packageFragment.accept(this, nameResolver, listOf(fileIndex)) }
-                }
-                KlibFragmentedPackage(packageFqName, fragments)
+                }.let { readStrategy.processPackageParts(packageFqName, it) }
             }
-            return KlibMetadata(moduleHeader.stringTable, packageFragments)
+            return KlibMetadata(packageFragments)
         }
     }
 
-    fun write(): SerializedMetadata {
+    /**
+     * Writes metadata back to serialized representation.
+     * @param writeStrategy specifies the way package fragments are modified (e.g. splitted) before serialization.
+     */
+    // TODO: exposes SerializedMetadata which is internal!
+    fun write(
+        writeStrategy: KlibPackageFragmentWriteStrategy = KlibPackageFragmentWriteStrategy.DEFAULT
+    ): SerializedMetadata {
         val reverseIndex = ReverseSourceFileIndexWriteExtension()
-        val packagesProtoParts = fragmentedPackageFragments.map { (_, fragments) ->
-            fragments.map { KlibPackageFragmentWriter(stringTable, reverseIndex).also(it::accept).write() }
-        }
-        val header = KlibHeader(stringTable, reverseIndex.fileIndex, fragmentedPackageFragments.map { it.fqName })
+        val c = WriteContext(KlibMetadataStringTable(), listOf(reverseIndex))
+
+        val groupedPackageFragmentsProtos = namedPackageFragments
+            .groupBy({ it.first }, { it.second })
+            .mapValues { writeStrategy.processPackageParts(it.key, it.value) }
+            .mapValues { (_, fragments) ->
+                fragments.map {
+                    KlibPackageFragmentWriter(c.strings as KlibMetadataStringTable, c.contextExtensions).also(it::accept).write()
+                }
+            }
+        val header = KlibHeader(reverseIndex.fileIndex, groupedPackageFragmentsProtos.map { it.key })
         return SerializedMetadata(
-            header.writeHeader().build().toByteArray(),
-            packagesProtoParts.map { it.map(ProtoBuf.PackageFragment::toByteArray) },
+            header.writeHeader(c).build().toByteArray(),
+            groupedPackageFragmentsProtos.map { it.value.map(ProtoBuf.PackageFragment::toByteArray) },
             header.packageFragmentName
         )
     }
