@@ -965,7 +965,7 @@ class ExpressionCodegen(
             }
         }
 
-        val original = (callee as? IrSimpleFunction)?.resolveFakeOverride() ?: irFunction
+        val original = (callee as? IrSimpleFunction)?.resolveFakeOverride() ?: callee
         val methodOwner = callee.parent.safeAs<IrClass>()?.let(typeMapper::mapClass) ?: MethodSignatureMapper.FAKE_OWNER_TYPE
         val sourceCompiler = IrSourceCompilerForInline(state, element, original, this, data)
 
