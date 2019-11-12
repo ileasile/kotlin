@@ -729,12 +729,10 @@ class NewResolvedCallImpl<D : CallableDescriptor>(
 
     private fun CallableDescriptor.substituteInferredVariablesAndApproximate(substitutor: NewTypeSubstitutor?): CallableDescriptor {
         val inferredTypeVariablesSubstitutor = substitutor ?: FreshVariableNewTypeSubstitutor.Empty
+        val compositeSubstitutor = inferredTypeVariablesSubstitutor.composeWith(resolvedCallAtom.knownParametersSubstitutor)
 
-        val compositeSubstitutor = resolvedCallAtom.freshVariablesSubstitutor
-            .composeWith(resolvedCallAtom.knownParametersSubstitutor)
-            .composeWith(inferredTypeVariablesSubstitutor)
-
-        return substituteAndApproximateCapturedTypes(compositeSubstitutor, typeApproximator)
+        return substitute(resolvedCallAtom.freshVariablesSubstitutor)
+            .substituteAndApproximateCapturedTypes(compositeSubstitutor, typeApproximator)
     }
 
     fun getExpectedTypeForSamConvertedArgument(valueArgument: ValueArgument): UnwrappedType? =
