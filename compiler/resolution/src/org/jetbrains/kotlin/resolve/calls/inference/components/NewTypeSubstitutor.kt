@@ -190,19 +190,9 @@ class FreshVariableNewTypeSubstitutor(val freshVariables: List<TypeVariableFromC
     }
 }
 
-fun createCompositeSubstitutor(appliedFirst: NewTypeSubstitutor, appliedLast: NewTypeSubstitutor): NewTypeSubstitutor {
-    return object : NewTypeSubstitutor {
-        override fun substituteNotNullTypeWithConstructor(constructor: TypeConstructor): UnwrappedType? {
-            val substitutedOnce = appliedFirst.substituteNotNullTypeWithConstructor(constructor)
-
-            return appliedLast.substituteNotNullTypeWithConstructor(
-                substitutedOnce?.constructor ?: constructor
-            ) ?: substitutedOnce
-        }
-    }
-}
-
 fun createCompositeSubstitutor(appliedFirst: NewTypeSubstitutor, appliedLast: TypeSubstitutor): NewTypeSubstitutor {
+    if (appliedLast.isEmpty) return appliedFirst
+
     return object : NewTypeSubstitutor {
         override fun substituteNotNullTypeWithConstructor(constructor: TypeConstructor): UnwrappedType? {
             val substitutedOnce = appliedFirst.substituteNotNullTypeWithConstructor(constructor)
@@ -218,5 +208,4 @@ fun createCompositeSubstitutor(appliedFirst: NewTypeSubstitutor, appliedLast: Ty
     }
 }
 
-fun NewTypeSubstitutor.composeWith(appliedAfter: NewTypeSubstitutor) = createCompositeSubstitutor(this, appliedAfter)
 fun NewTypeSubstitutor.composeWith(appliedAfter: TypeSubstitutor) = createCompositeSubstitutor(this, appliedAfter)
