@@ -22,12 +22,12 @@ import org.jetbrains.kotlin.metadata.deserialization.NameResolverImpl
  * For example, it may be convenient to join fragments into a single one.
  */
 interface KlibPackageFragmentReadStrategy {
-    fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<Pair<String, KmPackageFragment>>
+    fun processPackageParts(parts: List<KmPackageFragment>): List<KmPackageFragment>
 
     companion object {
         val DEFAULT = object : KlibPackageFragmentReadStrategy {
-            override fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>) =
-                parts.map { packageFqName to it }
+            override fun processPackageParts(parts: List<KmPackageFragment>) =
+                parts
         }
     }
 }
@@ -37,11 +37,11 @@ interface KlibPackageFragmentReadStrategy {
  * For example, splitting big fragments into several small one allows to improve IDE performance.
  */
 interface KlibPackageFragmentWriteStrategy {
-    fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<KmPackageFragment>
+    fun processPackageParts(parts: List<KmPackageFragment>): List<KmPackageFragment>
 
     companion object {
         val DEFAULT = object : KlibPackageFragmentWriteStrategy {
-            override fun processPackageParts(packageFqName: String, parts: List<KmPackageFragment>): List<KmPackageFragment> =
+            override fun processPackageParts(parts: List<KmPackageFragment>): List<KmPackageFragment> =
                 parts
         }
     }
@@ -50,7 +50,7 @@ interface KlibPackageFragmentWriteStrategy {
 /**
  * Represents the parsed metadata of KLIB.
  */
-class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragment>>) {
+class KlibMetadata(val packageFragments: List<KmPackageFragment>) {
 
     companion object {
         /**
@@ -70,7 +70,7 @@ class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragmen
                 library.packageMetadataParts(packageFqName).map { part ->
                     val packageFragment = parsePackageFragment(library.packageMetadata(packageFqName, part))
                     KmPackageFragment().apply { packageFragment.accept(this, nameResolver, listOf(fileIndex)) }
-                }.let { readStrategy.processPackageParts(packageFqName, it) }
+                }.let(readStrategy::processPackageParts)
             }
             return KlibMetadata(packageFragments)
         }
@@ -78,7 +78,7 @@ class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragmen
 
     /**
      * Writes metadata back to serialized representation.
-     * @param writeStrategy specifies the way package fragments are modified (e.g. splitted) before serialization.
+     * @param writeStrategy specifies the way package fragments are modified (e.g. split) before serialization.
      */
     // TODO: exposes SerializedMetadata which is internal!
     fun write(
@@ -87,9 +87,9 @@ class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragmen
         val reverseIndex = ReverseSourceFileIndexWriteExtension()
         val c = WriteContext(KlibMetadataStringTable(), listOf(reverseIndex))
 
-        val groupedPackageFragmentsProtos = namedPackageFragments
-            .groupBy({ it.first }, { it.second })
-            .mapValues { writeStrategy.processPackageParts(it.key, it.value) }
+        val groupedPackageFragmentsProtos = packageFragments
+            .groupBy({ it.fqNameOrFail() }, { it })
+            .mapValues { writeStrategy.processPackageParts(it.value) }
             .mapValues { (_, fragments) ->
                 fragments.map {
                     KlibPackageFragmentWriter(c.strings as KlibMetadataStringTable, c.contextExtensions).also(it::accept).write()
@@ -102,4 +102,7 @@ class KlibMetadata(val namedPackageFragments: List<Pair<String, KmPackageFragmen
             header.packageFragmentName
         )
     }
+
+    private fun KmPackageFragment.fqNameOrFail(): String =
+        fqName ?: error("Package fragment must have a fully-qualified name.")
 }

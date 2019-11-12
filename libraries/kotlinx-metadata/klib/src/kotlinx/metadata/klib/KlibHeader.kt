@@ -5,8 +5,6 @@
 
 package kotlinx.metadata.klib
 
-import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataStringTable
-
 class KlibHeader(
     val file: List<KlibSourceFile>,
     val packageFragmentName: List<String>
