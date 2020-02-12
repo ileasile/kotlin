@@ -113,23 +113,21 @@ class LegacyReplTest : TestCase() {
     }
 
     private fun checkContains(actual: List<CompletionVariant>, expected: Set<String>) {
-        assertTrue(
-            "List ${actual.map { it.displayText }} should contain every element from $expected",
-            actual.map { it.displayText }.toSet().let { displays ->
-                expected.map { displays.contains(it) }.reduce { acc, value ->
-                    acc && value
-                }
-            })
+        val variants = actual.map { it.displayText }.toHashSet()
+        for (displayText in expected) {
+            if (!variants.contains(displayText)) {
+                fail("Element $displayText should be in $variants")
+            }
+        }
     }
 
     private fun checkDoesntContain(actual: List<CompletionVariant>, expected: Set<String>) {
-        assertFalse(
-            "List ${actual.map { it.displayText }} should NOT contain every element from $expected",
-            actual.map { it.displayText }.toSet().let { displays ->
-                expected.map { displays.contains(it) }.reduce { acc, value ->
-                    acc || value
-                }
-            })
+        val variants = actual.map { it.displayText }.toHashSet()
+        for (displayText in expected) {
+            if (variants.contains(displayText)) {
+                fail("Element $displayText should NOT be in $variants")
+            }
+        }
     }
 
     fun testCompletion() = LegacyTestRepl().use { repl ->

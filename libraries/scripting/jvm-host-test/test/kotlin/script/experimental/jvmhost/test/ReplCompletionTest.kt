@@ -6,6 +6,7 @@
 package kotlin.script.experimental.jvmhost.test
 
 import junit.framework.TestCase
+import org.jetbrains.kotlin.backend.common.push
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.utils.CompletionVariant
 import org.junit.Assert
@@ -17,214 +18,167 @@ import kotlin.script.experimental.jvmhost.repl.JvmReplCompiler
 
 class ReplCompletionTest : TestCase() {
     @Test
-    fun testTrivial() {
-        checkEvaluateInReplForCompletion(
-            simpleScriptCompilationConfiguration,
-            sequenceOf(
-                Pair(
-                    null,
-                    """
-                        data class AClass(val memx: Int, val memy: String)
-                        data class BClass(val memz: String, val mema: AClass)
-                        val foobar = 42
-                        var foobaz = "string"
-                        val v = BClass("KKK", AClass(5, "25"))
-                    """.trimIndent()
-                ) to ExpectedResult(emptyList()),
+    fun testTrivial() = test {
+        run {
+            code = """
+                data class AClass(val memx: Int, val memy: String)
+                data class BClass(val memz: String, val mema: AClass)
+                val foobar = 42
+                var foobaz = "string"
+                val v = BClass("KKK", AClass(5, "25"))
+            """.trimIndent()
+        }
 
-                Pair(
-                    3,
-                    """
-                        foo
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant(
-                            "foobar",
-                            "foobar",
-                            "Int",
-                            "property"
-                        ),
-                        CompletionVariant(
-                            "foobaz",
-                            "foobaz",
-                            "String",
-                            "property"
-                        )
-                    )
-                ),
+        run {
+            code = "foo"
+            cursor = 3
+            expect {
+                add("foobar", "foobar", "Int", "property")
+                add("foobaz", "foobaz", "String", "property")
+            }
+        }
 
-                Pair(
-                    7,
-                    """
-                        v.mema.
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant(
-                            "memx",
-                            "memx",
-                            "Int",
-                            "property"
-                        ),
-                        CompletionVariant(
-                            "memy",
-                            "memy",
-                            "String",
-                            "property"
-                        )
-                    ),
-                    ComparisonType.INCLUDES
-                ),
+        run {
+            code = "v.mema."
+            cursor = 7
+            expect {
+                mode(ComparisonType.INCLUDES)
+                add("memx", "memx", "Int", "property")
+                add("memy", "memy", "String", "property")
+            }
+        }
 
-                Pair(
-                    5,
-                    """
-                        listO
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant(
-                            "listOf(",
-                            "listOf(T)",
-                            "List<T>",
-                            "method"
-                        ),
-                        CompletionVariant(
-                            "listOf()",
-                            "listOf()",
-                            "List<T>",
-                            "method"
-                        ),
-                        CompletionVariant(
-                            "listOf(",
-                            "listOf(vararg T)",
-                            "List<T>",
-                            "method"
-                        ),
-                        CompletionVariant(
-                            "listOfNotNull(",
-                            "listOfNotNull(T?)",
-                            "List<T>",
-                            "method"
-                        ),
-                        CompletionVariant(
-                            "listOfNotNull(",
-                            "listOfNotNull(vararg T?)",
-                            "List<T>",
-                            "method"
-                        )
-                    )
-                )
-            )
-        )
+        run {
+            code = "listO"
+            cursor = 5
+            expect {
+                add("listOf(", "listOf(T)", "List<T>", "method")
+                add("listOf()", "listOf()", "List<T>", "method")
+                add("listOf(", "listOf(vararg T)", "List<T>", "method")
+                add("listOfNotNull(", "listOfNotNull(T?)", "List<T>", "method")
+                add("listOfNotNull(", "listOfNotNull(vararg T?)", "List<T>", "method")
+            }
+        }
+    }
+
+
+    @Test
+    fun testPackagesImport() = test {
+        run {
+            cursor = 17
+            code = "import java.lang."
+            expect {
+                mode(ComparisonType.INCLUDES)
+                add("Process", "Process", " (java.lang)", "class")
+            }
+        }
     }
 
     @Test
-    fun testPackagesImport() {
-        checkEvaluateInReplForCompletion(
-            simpleScriptCompilationConfiguration,
-            sequenceOf(
-                Pair(
-                    17,
-                    """
-                        import java.lang.
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant(
-                            "Process",
-                            "Process",
-                            " (java.lang)",
-                            "class"
-                        )
-                    ), ComparisonType.INCLUDES
-                )
-            )
-        )
+    fun testExtensionMethods() = test {
+        run {
+            code = """
+                class AClass(val c_prop_x: Int) {
+                    fun filter(xxx: (AClass).() -> Boolean): AClass {
+                        return this
+                    }
+                }
+                val AClass.c_prop_y: Int
+                    get() = c_prop_x * c_prop_x
+                
+                fun AClass.c_meth_z(v: Int) = v * c_prop_y
+                val df = AClass(10)
+                val c_zzz = "some string"
+            """.trimIndent()
+        }
+
+        run {
+            code = "df.filter{ c_ }"
+            cursor = 13
+            expect {
+                add("c_prop_x", "c_prop_x", "Int", "property")
+                add("c_zzz", "c_zzz", "String", "property")
+                add("c_prop_y", "c_prop_y", "Int", "property")
+                add("c_meth_z(", "c_meth_z(Int)", "Int", "method")
+            }
+        }
+
+        run {
+            code = "df.fil"
+            cursor = 6
+            expect {
+                add("filter { ", "filter(Line_1_simplescript.AClass.() -> ...", "Line_1_simplescript.AClass", "method")
+            }
+        }
     }
 
     @Test
-    fun testExtensionMethods() {
-        checkEvaluateInReplForCompletion(
-            simpleScriptCompilationConfiguration,
-            sequenceOf(
-                Pair(
-                    null,
-                    """
-                        class AClass(val c_prop_x: Int) {
-                            fun filter(xxx: (AClass).() -> Boolean): AClass {
-                                return this
-                            }
-                        }
-                        val AClass.c_prop_y: Int
-                            get() = c_prop_x * c_prop_x
-                        
-                        fun AClass.c_meth_z(v: Int) = v * c_prop_y
-                        val df = AClass(10)
-                        val c_zzz = "some string"
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    emptyList()
-                ),
-                Pair(
-                    13,
-                    """
-                        df.filter{ c_ }
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant("c_prop_x", "c_prop_x", "Int", "property"),
-                        CompletionVariant("c_zzz", "c_zzz", "String", "property"),
-                        CompletionVariant("c_prop_y", "c_prop_y", "Int", "property"),
-                        CompletionVariant("c_meth_z(", "c_meth_z(Int)", "Int", "method")
-                    )
-                ),
-                Pair(
-                    6,
-                    """
-                        df.fil
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant(
-                            "filter { ",
-                            "filter(Line_1_simplescript.AClass.() -> ...",
-                            "Line_1_simplescript.AClass",
-                            "method"
-                        )
-                    )
-                )
-            )
-        )
+    fun testBacktickedFields() = test {
+        run {
+            code = """
+                class AClass(val `c_prop   x y z`: Int)
+                val df = AClass(33)
+            """.trimIndent()
+        }
+
+        run {
+            code = "df.c_"
+            cursor = 5
+            expect {
+                add("`c_prop   x y z`", "`c_prop   x y z`", "Int", "property")
+            }
+        }
     }
 
-    @Test
-    fun testBacktickedFields() {
-        checkEvaluateInReplForCompletion(
-            simpleScriptCompilationConfiguration,
-            sequenceOf(
-                Pair(
-                    null,
-                    """
-                        class AClass(val `c_prop   x y z`: Int)
-                        val df = AClass(33)
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    emptyList()
-                ),
-                Pair(
-                    5,
-                    """
-                        df.c_
-                    """.trimIndent()
-                ) to ExpectedResult(
-                    listOf(
-                        CompletionVariant("`c_prop   x y z`", "`c_prop   x y z`", "Int", "property")
-                    )
-                )
-            )
-        )
+    private class TestConf {
+        private val runs = mutableListOf<Run>()
+
+        fun run(setup: (Run).() -> Unit) {
+            val r = Run()
+            r.setup()
+            runs.push(r)
+        }
+
+        fun collect() = runs.map { it.collect() }
+
+        class Run {
+            var cursor: Int? = null
+            var code: String = ""
+            private var _expected: Expected = Expected()
+
+            fun expect(setup: (Expected).() -> Unit) {
+                _expected = Expected()
+                _expected.setup()
+            }
+
+            fun collect(): Pair<Pair<Int?, String>, ExpectedResult> {
+                return Pair(cursor, code) to _expected.collect()
+            }
+
+            class Expected {
+                private val variants = mutableListOf<CompletionVariant>()
+                private var _mode: ComparisonType = ComparisonType.EQUALS
+
+                fun collect(): ExpectedResult {
+                    return ExpectedResult(variants, _mode)
+                }
+
+                fun add(text: String, displayText: String, tail: String, icon: String) {
+                    variants.push(CompletionVariant(text, displayText, tail, icon))
+                }
+
+                fun mode(mode: ComparisonType) {
+                    _mode = mode
+                }
+            }
+
+        }
+    }
+
+    private fun test(setup: (TestConf).() -> Unit) {
+        val test = TestConf()
+        test.setup()
+        checkEvaluateInRepl(simpleScriptCompilationConfiguration, test.collect())
     }
 
     enum class ComparisonType {
@@ -237,7 +191,7 @@ class ReplCompletionTest : TestCase() {
 
     private fun nextCodeLine(code: String): ReplCodeLine = ReplCodeLine(currentLineCounter.getAndIncrement(), 0, code)
 
-    private fun evaluateInReplForCompletion(
+    private fun evaluateInRepl(
         compilationConfiguration: ScriptCompilationConfiguration,
         snippets: List<Pair<Int?, String>>
     ): List<ResultWithDiagnostics<List<CompletionVariant>>> {
@@ -258,13 +212,13 @@ class ReplCompletionTest : TestCase() {
         }
     }
 
-    private fun checkEvaluateInReplForCompletion(
+    private fun checkEvaluateInRepl(
         compilationConfiguration: ScriptCompilationConfiguration,
-        testData: Sequence<Pair<Pair<Int?, String>, ExpectedResult>>
+        testData: List<Pair<Pair<Int?, String>, ExpectedResult>>
     ) {
         val (snippets, expected) = testData.unzip()
         val expectedIter = expected.iterator()
-        evaluateInReplForCompletion(compilationConfiguration, snippets).forEachIndexed { index, res ->
+        evaluateInRepl(compilationConfiguration, snippets).forEachIndexed { index, res ->
             when (res) {
                 is ResultWithDiagnostics.Failure -> Assert.fail("#$index: Expected result, got $res")
                 is ResultWithDiagnostics.Success -> {
