@@ -5,10 +5,13 @@
 
 package kotlin.script.experimental.jvmhost.repl
 
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.cli.common.repl.*
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.KJvmReplCompilerImpl
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.JvmReplCompilerState
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.KJvmReplCompilerProxy
+import org.jetbrains.kotlin.utils.CompletionVariant
+import org.jetbrains.kotlin.utils.KotlinReplError
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import kotlin.script.experimental.api.*
@@ -25,7 +28,7 @@ class JvmReplCompiler(
     val replCompilerProxy: KJvmReplCompilerProxy = KJvmReplCompilerImpl(
         hostConfiguration.withDefaultsFrom(defaultJvmScriptingHostConfiguration)
     )
-) : ReplCompiler {
+) : IDELikeReplCompiler {
 
     override fun createState(lock: ReentrantReadWriteLock): IReplStageState<*> = JvmReplCompilerState(replCompilerProxy, lock)
 
@@ -63,8 +66,87 @@ class JvmReplCompiler(
                     res.value.resultField?.second?.typeName,
                     res.value
                 )
-            else -> ReplCompileResult.Error(res.reports.joinToString("\n") { it.message })
+            else -> ReplCompileResult.Error(
+                res.reports.joinToString("\n") { report ->
+                    report.location?.let { loc ->
+                        CompilerMessageLocation.create(
+                            report.sourcePath,
+                            loc.start.line,
+                            loc.start.col,
+                            loc.end?.line,
+                            loc.end?.col,
+                            null
+                        )?.toString()?.let {
+                            "$it "
+                        }
+                    }.orEmpty() + report.message
+                },
+                res.reports.firstOrNull {
+                    when (it.severity) {
+                        ScriptDiagnostic.Severity.ERROR -> true
+                        ScriptDiagnostic.Severity.FATAL -> true
+                        else -> false
+                    }
+                }?.let {
+                    val loc = it.location ?: return@let null
+                    CompilerMessageLocation.create(it.sourcePath, loc.start.line, loc.start.col, loc.end?.line, loc.end?.col, null)
+                })
         }
+    }
+
+    override fun complete(state: IReplStageState<*>, codeLine: ReplCodeLine, cursor: Int): List<CompletionVariant> = state.lock.write {
+        val replCompilerState = state.asState(JvmReplCompilerState::class.java)
+        val compilation = replCompilerState.getCompilationState(scriptCompilationConfiguration)
+        val snippet = codeLine.toSourceCode(scriptCompilationConfiguration)
+        val snippetId = ReplSnippetIdImpl(codeLine.no, codeLine.generation, snippet)
+        return getCompletion(compilation, snippet, snippetId, cursor)
+    }
+
+    override fun listErrors(state: IReplStageState<*>, codeLine: ReplCodeLine): List<KotlinReplError> {
+        val replCompilerState = state.asState(JvmReplCompilerState::class.java)
+        val compilation = replCompilerState.getCompilationState(scriptCompilationConfiguration)
+        val snippet = codeLine.toSourceCode(scriptCompilationConfiguration)
+        val snippetId = ReplSnippetIdImpl(codeLine.no, codeLine.generation, snippet)
+        return getErrorsList(compilation, snippet, snippetId)
+    }
+
+    private fun getCompletion(
+        compilation: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId,
+        cursor: Int
+    ): List<CompletionVariant> {
+        return when (val res = replCompilerProxy.getCompletion(compilation, snippet, snippetId, cursor)) {
+            is ResultWithDiagnostics.Success -> res.value
+            else -> throw Exception(res.reports.joinToString("\n") { it.message })
+        }
+    }
+
+    private fun getErrorsList(
+        compilation: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId
+    ): List<KotlinReplError> {
+        return replCompilerProxy.getErrors(compilation, snippet, snippetId)
+            .mapNotNull { diag ->
+                KotlinReplError(
+                    diag.location?.let { loc ->
+                        KotlinReplError.Location(
+                            loc.start.let { KotlinReplError.Pos(it.line, it.col) },
+                            loc.end?.let { KotlinReplError.Pos(it.line, it.col) }
+                        )
+                    },
+                    diag.message,
+                    diag.severity.let {
+                        when (it) {
+                            ScriptDiagnostic.Severity.FATAL -> KotlinReplError.Severity.FATAL
+                            ScriptDiagnostic.Severity.ERROR -> KotlinReplError.Severity.ERROR
+                            ScriptDiagnostic.Severity.WARNING -> KotlinReplError.Severity.WARNING
+                            else -> return@mapNotNull null
+                        }
+                    }
+                )
+            }
     }
 }
 

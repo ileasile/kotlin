@@ -10,7 +10,6 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.cli.common.repl.BasicReplStageHistory
 import org.jetbrains.kotlin.descriptors.ScriptDescriptor
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.KJvmReplCompilerImpl
-import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.junit.Assert
 import org.junit.Test
 import kotlin.script.experimental.api.*
@@ -75,7 +74,7 @@ class ReplTest : TestCase() {
                 "res1 * 3"
             ),
             sequenceOf(null, 7, 21),
-            simpleScriptompilationConfiguration.with {
+            simpleScriptCompilationConfiguration.with {
                 implicitReceivers(TestReceiver::class)
             },
             simpleScriptEvaluationConfiguration.with {
@@ -93,6 +92,27 @@ class ReplTest : TestCase() {
                 "x + 1"
             ),
             sequenceOf(RuntimeException("abc"), null, 4)
+        )
+    }
+
+    @Test
+    fun testEvalWithErrorWithLocation() {
+        checkEvaluateInReplDiags(
+            sequenceOf(
+                """
+                    val foobar = 78
+                    val foobaz = "dsdsda"
+                    val ddd = ppp
+                    val ooo = foobar
+                """.trimIndent()
+            ),
+            sequenceOf(
+                makeFailureResult(
+                    "Unresolved reference: ppp", location = SourceCode.Location(
+                        SourceCode.Position(3, 11), SourceCode.Position(3, 14)
+                    )
+                )
+            )
         )
     }
 
@@ -140,7 +160,7 @@ class ReplTest : TestCase() {
 
 fun evaluateInRepl(
     snippets: Sequence<String>,
-    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptompilationConfiguration,
+    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptCompilationConfiguration,
     evaluationConfiguration: ScriptEvaluationConfiguration? = simpleScriptEvaluationConfiguration,
     limit: Int = 0
 ): Sequence<ResultWithDiagnostics<EvaluationResult>> {
@@ -152,7 +172,8 @@ fun evaluateInRepl(
     var currentEvalConfig = evaluationConfiguration ?: ScriptEvaluationConfiguration()
     val snipetsLimited = if (limit == 0) snippets else snippets.take(limit)
     return snipetsLimited.mapIndexed { snippetNo, snippetText ->
-        val snippetSource = snippetText.toScriptSource("Line_$snippetNo.${compilationConfiguration[ScriptCompilationConfiguration.fileExtension]}")
+        val snippetSource =
+            snippetText.toScriptSource("Line_$snippetNo.${compilationConfiguration[ScriptCompilationConfiguration.fileExtension]}")
         val snippetId = ReplSnippetIdImpl(snippetNo, 0, snippetSource)
         replCompilerProxy.compileReplSnippet(compilationState, snippetSource, snippetId, compilationHistory)
             .onSuccess {
@@ -178,7 +199,7 @@ fun evaluateInRepl(
 fun checkEvaluateInReplDiags(
     snippets: Sequence<String>,
     expected: Sequence<ResultWithDiagnostics<Any?>>,
-    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptompilationConfiguration,
+    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptCompilationConfiguration,
     evaluationConfiguration: ScriptEvaluationConfiguration? = simpleScriptEvaluationConfiguration,
     limit: Int = 0
 ) {
@@ -188,8 +209,14 @@ fun checkEvaluateInReplDiags(
         when {
             res is ResultWithDiagnostics.Failure && expectedRes is ResultWithDiagnostics.Failure -> {
                 Assert.assertTrue(
-                    "#$index: Expected $expectedRes, got $res",
+                    "#$index: Expected $expectedRes, got $res. Messages are different",
                     res.reports.map { it.message } == expectedRes.reports.map { it.message }
+                )
+                Assert.assertTrue(
+                    "#$index: Expected $expectedRes, got $res. Locations are different",
+                    res.reports.map { it.location }.zip(expectedRes.reports.map { it.location }).all {
+                        it.second == null || it.second == it.first
+                    }
                 )
             }
             res is ResultWithDiagnostics.Success && expectedRes is ResultWithDiagnostics.Success -> {
@@ -221,7 +248,7 @@ fun checkEvaluateInReplDiags(
 fun checkEvaluateInRepl(
     snippets: Sequence<String>,
     expected: Sequence<Any?>,
-    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptompilationConfiguration,
+    compilationConfiguration: ScriptCompilationConfiguration = simpleScriptCompilationConfiguration,
     evaluationConfiguration: ScriptEvaluationConfiguration? = simpleScriptEvaluationConfiguration,
     limit: Int = 0
 ) = checkEvaluateInReplDiags(

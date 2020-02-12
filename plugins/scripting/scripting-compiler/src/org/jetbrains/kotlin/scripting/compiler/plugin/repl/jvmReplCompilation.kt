@@ -11,6 +11,9 @@ import com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.cli.common.repl.*
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.descriptors.ScriptDescriptor
+import org.jetbrains.kotlin.diagnostics.Diagnostic
+import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
+import org.jetbrains.kotlin.utils.CompletionVariant
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import kotlin.script.experimental.api.*
@@ -31,6 +34,19 @@ interface KJvmReplCompilerProxy {
         snippetId: ReplSnippetId,
         history: IReplStageHistory<ScriptDescriptor>
     ): ResultWithDiagnostics<CompiledScript<*>>
+
+    fun getCompletion(
+        compilationState: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId,
+        cursor: Int
+    ): ResultWithDiagnostics<List<CompletionVariant>>
+
+    fun getErrors(
+        compilationState: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId
+    ): List<ScriptDiagnostic>
 }
 
 class JvmReplCompilerStageHistory(private val state: JvmReplCompilerState) :

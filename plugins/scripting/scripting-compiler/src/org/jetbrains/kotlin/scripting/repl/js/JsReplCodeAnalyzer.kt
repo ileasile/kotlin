@@ -22,7 +22,7 @@ class JsReplCodeAnalyzer(
 
     fun analyzeReplLine(linePsi: KtFile, codeLine: ReplCodeLine): AnalysisResult {
         linePsi.script!!.putUserData(ScriptPriorities.PRIORITY_KEY, codeLine.no)
-        replState.submitLine(linePsi, codeLine)
+        replState.submitLine(linePsi)
 
         val result = analysisImpl(linePsi)
 
@@ -30,7 +30,7 @@ class JsReplCodeAnalyzer(
             replState.lineSuccess(linePsi, codeLine, result.script)
             AnalysisResult.success(result.bindingContext, result.moduleDescriptor)
         } else {
-            replState.lineFailure(linePsi, codeLine)
+            replState.lineFailure(linePsi)
             AnalysisResult.compilationError(result.bindingContext)
         }
     }

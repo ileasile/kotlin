@@ -9,6 +9,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.cli.common.environment.setIdeaIoUseFallback
 import org.jetbrains.kotlin.cli.common.messages.AnalyzerWithCompilerReport
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.common.messages.MessageCollectorBasedReporter
 import org.jetbrains.kotlin.cli.common.repl.IReplStageHistory
 import org.jetbrains.kotlin.cli.common.repl.LineId
@@ -18,10 +19,13 @@ import org.jetbrains.kotlin.codegen.ClassBuilderFactories
 import org.jetbrains.kotlin.codegen.KotlinCodegenFacade
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.ScriptDescriptor
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.scripting.compiler.plugin.dependencies.ScriptsCompilationDependencies
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.JvmReplCompilerState
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.KJvmReplCompilerProxy
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.ReplCodeAnalyzer
 import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
+import org.jetbrains.kotlin.utils.CompletionVariant
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.ScriptingHostConfiguration
 
@@ -72,51 +76,14 @@ class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : 
     ): ResultWithDiagnostics<CompiledScript<*>> =
         withMessageCollector(snippet) { messageCollector ->
 
-            val context = (compilationState as? ReplCompilationState)?.context
-                ?: return failure(
-                    snippet, messageCollector, "Internal error: unknown parameter passed as compilationState: $compilationState"
-                )
-
-            setIdeaIoUseFallback()
-
-            // NOTE: converting between REPL entities from compiler and "new" scripting entities
-            // TODO: (big) move REPL API from compiler to the new scripting infrastructure and streamline ops
-            val codeLine = makeReplCodeLine(snippetId, snippet)
-
-            val errorHolder = object : MessageCollectorBasedReporter {
-                override val messageCollector = messageCollector
-            }
-
-            val snippetKtFile =
-                getScriptKtFile(
-                    snippet,
-                    context.baseScriptCompilationConfiguration,
-                    context.environment.project,
-                    messageCollector
-                )
-                    .valueOr { return it }
-
-            val syntaxErrorReport = AnalyzerWithCompilerReport.reportSyntaxErrors(snippetKtFile, errorHolder)
-            if (syntaxErrorReport.isHasErrors) return failure(messageCollector)
-
-            val (sourceFiles, sourceDependencies) = collectRefinedSourcesAndUpdateEnvironment(
-                context,
-                snippetKtFile,
-                messageCollector
-            )
-
-            val firstFailure = sourceDependencies.firstOrNull { it.sourceDependencies is ResultWithDiagnostics.Failure }
-                ?.let { it.sourceDependencies as ResultWithDiagnostics.Failure }
-
-            if (firstFailure != null)
-                return firstFailure
-
-            if (history.isEmpty()) {
-                val updatedConfiguration = ScriptDependenciesProvider.getInstance(context.environment.project)
-                    ?.getScriptConfiguration(snippetKtFile)?.configuration
-                    ?: context.baseScriptCompilationConfiguration
-                registerPackageFragmentProvidersIfNeeded(updatedConfiguration, context.environment)
-            }
+            val (context, codeLine, errorHolder, snippetKtFile, sourceFiles, sourceDependencies) = prepareForAnalyze(
+                snippet,
+                messageCollector,
+                compilationState,
+                snippetId,
+                history,
+                checkSyntaxErrors = true
+            ).valueOr { return@withMessageCollector it }
 
             val analysisResult =
                 compilationState.analyzerEngine.analyzeReplLineWithImportedScripts(snippetKtFile, sourceFiles.drop(1), codeLine)
@@ -169,6 +136,146 @@ class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : 
                 }
 
             compiledScript.asSuccess(messageCollector.diagnostics)
+        }
+
+    override fun getCompletion(
+        compilationState: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId,
+        cursor: Int
+    ): ResultWithDiagnostics<List<CompletionVariant>> =
+        withMessageCollector(snippet) { messageCollector ->
+
+            val newText = KJvmReplCompleter.prepareCode(snippet.text, cursor)
+            val newSnippet = object : SourceCode {
+                override val text: String
+                    get() = newText
+                override val name: String?
+                    get() = snippet.name
+                override val locationId: String?
+                    get() = snippet.locationId
+
+            }
+
+            val (_, codeLine, errorHolder, snippetKtFile, sourceFiles, _) = prepareForAnalyze(
+                newSnippet,
+                messageCollector,
+                compilationState,
+                snippetId,
+                null,
+                checkSyntaxErrors = false
+            ).valueOr { return@withMessageCollector it }
+
+            val analysisResult =
+                compilationState.analyzerEngine.analyzeForCompletionWithImportedScripts(snippetKtFile, sourceFiles.drop(1), codeLine)
+            AnalyzerWithCompilerReport.reportDiagnostics(analysisResult.diagnostics, errorHolder)
+
+            val (_, bindingContext, resolutionFacade, moduleDescriptor) = when (analysisResult) {
+                is ReplCodeAnalyzer.ReplLineAnalysisResult.ForCompletion -> {
+                    analysisResult
+                }
+                else -> return failure(
+                    newSnippet,
+                    messageCollector,
+                    "Unexpected result ${analysisResult::class.java}"
+                )
+            }
+
+            val completer = KJvmReplCompleter(snippetKtFile, bindingContext, resolutionFacade, moduleDescriptor, cursor)
+
+            return completer.getCompletion().asSuccess(messageCollector.diagnostics)
+        }
+
+    override fun getErrors(
+        compilationState: JvmReplCompilerState.Compilation,
+        snippet: SourceCode,
+        snippetId: ReplSnippetId
+    ): List<ScriptDiagnostic> {
+        return withMessageCollector(snippet) { messageCollector ->
+            val (_, codeLine, errorHolder, snippetKtFile, sourceFiles, _) = prepareForAnalyze(
+                snippet,
+                messageCollector,
+                compilationState,
+                snippetId,
+                null,
+                checkSyntaxErrors = true
+            ).valueOr { return@withMessageCollector messageCollector.diagnostics.asSuccess() }
+
+            val analysisResult =
+                compilationState.analyzerEngine.analyzeReplLineWithImportedScripts(snippetKtFile, sourceFiles.drop(1), codeLine)
+            AnalyzerWithCompilerReport.reportDiagnostics(analysisResult.diagnostics, errorHolder)
+
+            messageCollector.diagnostics.asSuccess()
+        }.valueOr { throw RuntimeException("There should be always succeeded results") }
+    }
+
+    private data class AnalyzePreparationResult(
+        val context: SharedScriptCompilationContext,
+        val codeLine: ReplCodeLine,
+        val errorHolder: MessageCollectorBasedReporter,
+        val snippetKtFile: KtFile,
+        val sourceFiles: List<KtFile>,
+        val sourceDependencies: List<ScriptsCompilationDependencies.SourceDependencies>
+    )
+
+    private fun prepareForAnalyze(
+        snippet: SourceCode,
+        parentMessageCollector: MessageCollector,
+        compilationState: JvmReplCompilerState.Compilation,
+        snippetId: ReplSnippetId,
+        history: IReplStageHistory<ScriptDescriptor>?,
+        checkSyntaxErrors: Boolean
+    ): ResultWithDiagnostics<AnalyzePreparationResult> =
+        withMessageCollector(snippet, parentMessageCollector) { messageCollector ->
+            val context = (compilationState as? ReplCompilationState)?.context
+                ?: return failure(
+                    snippet, messageCollector, "Internal error: unknown parameter passed as compilationState: $compilationState"
+                )
+
+            setIdeaIoUseFallback()
+
+            // NOTE: converting between REPL entities from compiler and "new" scripting entities
+            // TODO: (big) move REPL API from compiler to the new scripting infrastructure and streamline ops
+            val codeLine = makeReplCodeLine(snippetId, snippet)
+
+            val errorHolder = object : MessageCollectorBasedReporter {
+                override val messageCollector = messageCollector
+            }
+
+            val snippetKtFile =
+                getScriptKtFile(
+                    snippet,
+                    context.baseScriptCompilationConfiguration,
+                    context.environment.project,
+                    messageCollector
+                )
+                    .valueOr { return it }
+
+            if (checkSyntaxErrors) {
+                val syntaxErrorReport = AnalyzerWithCompilerReport.reportSyntaxErrors(snippetKtFile, errorHolder)
+                if (syntaxErrorReport.isHasErrors) return failure(messageCollector)
+            }
+
+            val (sourceFiles, sourceDependencies) = collectRefinedSourcesAndUpdateEnvironment(
+                context,
+                snippetKtFile,
+                messageCollector
+            )
+
+            val firstFailure = sourceDependencies.firstOrNull { it.sourceDependencies is ResultWithDiagnostics.Failure }
+                ?.let { it.sourceDependencies as ResultWithDiagnostics.Failure }
+
+            if (firstFailure != null)
+                return firstFailure
+
+            if (history != null && history.isEmpty()) {
+                val updatedConfiguration = ScriptDependenciesProvider.getInstance(context.environment.project)
+                    ?.getScriptConfiguration(snippetKtFile)?.configuration
+                    ?: context.baseScriptCompilationConfiguration
+                registerPackageFragmentProvidersIfNeeded(updatedConfiguration, context.environment)
+            }
+
+            return AnalyzePreparationResult(context, codeLine, errorHolder, snippetKtFile, sourceFiles, sourceDependencies).asSuccess()
         }
 }
 

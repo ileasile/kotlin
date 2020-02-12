@@ -6,6 +6,7 @@ plugins { java }
 
 dependencies {
     embedded(project(":kotlin-scripting-jvm-host")) { isTransitive = false }
+    embedded(project(":idea:ide-common")) { isTransitive = false }
     runtime(project(":kotlin-script-runtime"))
     runtime(kotlinStdlib())
     runtime(project(":kotlin-scripting-common"))
