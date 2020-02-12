@@ -206,7 +206,7 @@ class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : 
             AnalyzerWithCompilerReport.reportDiagnostics(analysisResult.diagnostics, errorHolder)
 
             messageCollector.diagnostics.asSuccess()
-        }.valueOr { throw RuntimeException("There should be always succeeded results") }
+        }.valueOr { throw RuntimeException("There should be always successful results") }
     }
 
     private data class AnalyzePreparationResult(

@@ -11,8 +11,6 @@ import com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.cli.common.repl.*
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.descriptors.ScriptDescriptor
-import org.jetbrains.kotlin.diagnostics.Diagnostic
-import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.utils.CompletionVariant
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
