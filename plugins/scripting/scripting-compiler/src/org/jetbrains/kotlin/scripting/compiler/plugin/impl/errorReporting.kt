@@ -41,6 +41,10 @@ internal class ScriptDiagnosticsMessageCollector(private val parentMessageCollec
                     SourceCode.Position(
                         it.line,
                         it.column
+                    ),
+                    SourceCode.Position(
+                        it.lineEnd,
+                        it.columnEnd
                     )
                 )
             }
