@@ -288,6 +288,13 @@ class KJvmReplCompleter(
             } else builder
         }
 
+        // Insert a constant string right after a cursor position to make this identifiable as a simple reference
+        // For example, code line
+        //   import java.
+        //               ^
+        // is converted to
+        //   import java.ABCDEF
+        // and it makes token after dot (for which reference variants are looked) discoverable in PSI
         fun prepareCode(code: String, cursor: Int) = code.substring(0, cursor) + INSERTED_STRING + code.substring(cursor)
 
         data class DescriptorPresentation(
