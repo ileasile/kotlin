@@ -78,6 +78,8 @@ class JvmReplEvaluator(
                 }
             }
             else ->
+                /// TODO: nothing is saved in history here, and this leads to compilation/evaluation history is out of sync
+                /// See ticket https://youtrack.jetbrains.com/issue/KT-36397
                 ReplEvalResult.Error.Runtime(
                     res.reports.joinToString("\n") { it.message + (it.exception?.let { e -> ": $e" } ?: "") },
                     res.reports.find { it.exception != null }?.exception as? Exception
