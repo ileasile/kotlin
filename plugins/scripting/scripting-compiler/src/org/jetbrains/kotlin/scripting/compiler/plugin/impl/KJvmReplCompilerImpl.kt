@@ -182,11 +182,11 @@ class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : 
             ).valueOr { return@withMessageCollector it }
 
             val analysisResult =
-                compilationState.analyzerEngine.analyzeForCompletionWithImportedScripts(snippetKtFile, emptyList(), codeLine)
+                compilationState.analyzerEngine.statelessAnalyzeWithImportedScripts(snippetKtFile, emptyList(), codeLine)
             AnalyzerWithCompilerReport.reportDiagnostics(analysisResult.diagnostics, errorHolder)
 
             val (_, bindingContext, resolutionFacade, moduleDescriptor) = when (analysisResult) {
-                is ReplCodeAnalyzer.ReplLineAnalysisResult.ForCompletion -> {
+                is ReplCodeAnalyzer.ReplLineAnalysisResult.Stateless -> {
                     analysisResult
                 }
                 else -> return failure(
@@ -216,7 +216,7 @@ class KJvmReplCompilerImpl(val hostConfiguration: ScriptingHostConfiguration) : 
             ).valueOr { return@withMessageCollector messageCollector.diagnostics.asSuccess() }
 
             val analysisResult =
-                compilationState.analyzerEngine.analyzeReplLineWithImportedScripts(snippetKtFile, emptyList(), codeLine)
+                compilationState.analyzerEngine.statelessAnalyzeWithImportedScripts(snippetKtFile, emptyList(), codeLine)
             AnalyzerWithCompilerReport.reportDiagnostics(analysisResult.diagnostics, errorHolder)
 
             messageCollector.diagnostics.asSuccess()

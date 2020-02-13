@@ -8,6 +8,7 @@ package kotlin.script.experimental.jvmhost.test
 import junit.framework.TestCase
 import org.jetbrains.kotlin.backend.common.push
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
+import org.jetbrains.kotlin.ir.backend.js.export.ExportedType
 import org.jetbrains.kotlin.utils.CompletionVariant
 import org.junit.Assert
 import org.junit.Test
@@ -20,6 +21,7 @@ class ReplCompletionTest : TestCase() {
     @Test
     fun testTrivial() = test {
         run {
+            doCompile
             code = """
                 data class AClass(val memx: Int, val memy: String)
                 data class BClass(val memz: String, val mema: AClass)
@@ -77,6 +79,7 @@ class ReplCompletionTest : TestCase() {
     @Test
     fun testExtensionMethods() = test {
         run {
+            doCompile
             code = """
                 class AClass(val c_prop_x: Int) {
                     fun filter(xxx: (AClass).() -> Boolean): AClass {
@@ -115,6 +118,7 @@ class ReplCompletionTest : TestCase() {
     @Test
     fun testBacktickedFields() = test {
         run {
+            doCompile
             code = """
                 class AClass(val `c_prop   x y z`: Int)
                 val df = AClass(33)
@@ -126,6 +130,31 @@ class ReplCompletionTest : TestCase() {
             cursor = 5
             expect {
                 add("`c_prop   x y z`", "`c_prop   x y z`", "Int", "property")
+            }
+        }
+    }
+
+    @Test
+    fun testCompletionDuplication() = test {
+        for (i in 1..6) {
+            run {
+                if (i == 5) doCompile
+                if (i % 2 == 1) doErrorCheck
+
+                val value = "a".repeat(i)
+                code = "val ddddd = \"$value\""
+                cursor = 13 + i
+                expect {
+                    mode(ComparisonType.INCLUDES)
+                }
+            }
+        }
+
+        run {
+            code = "dd"
+            cursor = 2
+            expect {
+                add("ddddd", "ddddd", "String", "property")
             }
         }
     }
@@ -142,6 +171,18 @@ class ReplCompletionTest : TestCase() {
         fun collect() = runs.map { it.collect() }
 
         class Run {
+            private var _doCompile = false
+            val doCompile: Unit
+                get() {
+                    _doCompile = true
+                }
+
+            private var _doErrorCheck = false
+            val doErrorCheck: Unit
+                get() {
+                    _doErrorCheck = true
+                }
+
             var cursor: Int? = null
             var code: String = ""
             private var _expected: Expected = Expected()
@@ -151,8 +192,8 @@ class ReplCompletionTest : TestCase() {
                 _expected.setup()
             }
 
-            fun collect(): Pair<Pair<Int?, String>, ExpectedResult> {
-                return Pair(cursor, code) to _expected.collect()
+            fun collect(): Pair<CompletionRequest, ExpectedResult> {
+                return CompletionRequest(cursor, code, _doCompile, _doErrorCheck) to _expected.collect()
             }
 
             class Expected {
@@ -185,6 +226,8 @@ class ReplCompletionTest : TestCase() {
         INCLUDES, EQUALS
     }
 
+    data class CompletionRequest(val cursor: Int?, val code: String, val doCompile: Boolean, val doErrorCheck: Boolean)
+
     data class ExpectedResult(val completions: List<CompletionVariant>, val compType: ComparisonType = ComparisonType.EQUALS)
 
     private val currentLineCounter = AtomicInteger()
@@ -193,12 +236,12 @@ class ReplCompletionTest : TestCase() {
 
     private fun evaluateInRepl(
         compilationConfiguration: ScriptCompilationConfiguration,
-        snippets: List<Pair<Int?, String>>
+        snippets: List<CompletionRequest>
     ): List<ResultWithDiagnostics<List<CompletionVariant>>> {
         val compiler = JvmReplCompiler(compilationConfiguration)
         val stateLock = ReentrantReadWriteLock()
         val state = compiler.createState(stateLock)
-        return snippets.map { (cursor, snippetText) ->
+        return snippets.map { (cursor, snippetText, doComplile, doErrorCheck) ->
             val codeLine = nextCodeLine(snippetText)
             val res = if (cursor == null) {
                 emptyList<CompletionVariant>().asSuccess()
@@ -206,15 +249,23 @@ class ReplCompletionTest : TestCase() {
                 compiler.complete(state, codeLine, cursor).filter { it.tail != "keyword" }.asSuccess()
             }
 
-            val codeLineForCompilation = nextCodeLine(snippetText)
-            compiler.compile(state, codeLineForCompilation)
+            if (doErrorCheck) {
+                val codeLineForErrorCheck = nextCodeLine(snippetText)
+                compiler.listErrors(state, codeLineForErrorCheck)
+            }
+
+            if (doComplile) {
+                val codeLineForCompilation = nextCodeLine(snippetText)
+                compiler.compile(state, codeLineForCompilation)
+            }
+
             res
         }
     }
 
     private fun checkEvaluateInRepl(
         compilationConfiguration: ScriptCompilationConfiguration,
-        testData: List<Pair<Pair<Int?, String>, ExpectedResult>>
+        testData: List<Pair<CompletionRequest, ExpectedResult>>
     ) {
         val (snippets, expected) = testData.unzip()
         val expectedIter = expected.iterator()

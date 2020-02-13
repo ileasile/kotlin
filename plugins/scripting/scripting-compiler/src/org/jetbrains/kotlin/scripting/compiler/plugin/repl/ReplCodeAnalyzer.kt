@@ -21,7 +21,6 @@ import org.jetbrains.kotlin.descriptors.ClassDescriptorWithResolutionScopes
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.diagnostics.Severity
-import org.jetbrains.kotlin.idea.codeInsight.ReferenceVariantsHelper
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.*
@@ -85,7 +84,7 @@ class ReplCodeAnalyzer(private val environment: KotlinCoreEnvironment) {
             override val scriptDescriptor: ClassDescriptorWithResolutionScopes? get() = null
         }
 
-        data class ForCompletion(
+        data class Stateless(
             override val diagnostics: Diagnostics,
             val bindingContext: BindingContext,
             val resolutionFacade: KotlinResolutionFacade,
@@ -113,7 +112,7 @@ class ReplCodeAnalyzer(private val environment: KotlinCoreEnvironment) {
         return doAnalyze(psiFile, importedScripts, codeLine)
     }
 
-    fun analyzeForCompletionWithImportedScripts(
+    fun statelessAnalyzeWithImportedScripts(
         psiFile: KtFile,
         importedScripts: List<KtFile>,
         codeLine: ReplCodeLine
@@ -123,7 +122,7 @@ class ReplCodeAnalyzer(private val environment: KotlinCoreEnvironment) {
 
         psiFile.script!!.putUserData(ScriptPriorities.PRIORITY_KEY, codeLine.no)
 
-        return doAnalyzeForCompletion(psiFile, importedScripts)
+        return doStatelessAnalyze(psiFile, importedScripts)
     }
 
     private fun doAnalyze(linePsi: KtFile, importedScripts: List<KtFile>, codeLine: ReplCodeLine): ReplLineAnalysisResult {
@@ -149,7 +148,7 @@ class ReplCodeAnalyzer(private val environment: KotlinCoreEnvironment) {
         }
     }
 
-    private fun doAnalyzeForCompletion(linePsi: KtFile, importedScripts: List<KtFile>): ReplLineAnalysisResult {
+    private fun doStatelessAnalyze(linePsi: KtFile, importedScripts: List<KtFile>): ReplLineAnalysisResult {
         scriptDeclarationFactory.setDelegateFactory(
             FileBasedDeclarationProviderFactory(resolveSession.storageManager, listOf(linePsi) + importedScripts)
         )
@@ -160,7 +159,7 @@ class ReplCodeAnalyzer(private val environment: KotlinCoreEnvironment) {
         val moduleDescriptor = container.getService(ModuleDescriptor::class.java)
         val resolutionFacade = KotlinResolutionFacade(environment, container)
         val diagnostics = trace.bindingContext.diagnostics
-        return ReplLineAnalysisResult.ForCompletion(diagnostics, trace.bindingContext, resolutionFacade, moduleDescriptor)
+        return ReplLineAnalysisResult.Stateless(diagnostics, trace.bindingContext, resolutionFacade, moduleDescriptor)
     }
 
     private class ScriptMutableDeclarationProviderFactory : DeclarationProviderFactory {
