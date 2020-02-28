@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.scripting.compiler.plugin.dependencies.ScriptsCompil
 import org.jetbrains.kotlin.scripting.resolve.ScriptLightVirtualFile
 import org.jetbrains.kotlin.scripting.scriptFileName
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
+import java.io.Serializable
 import java.util.*
 import kotlin.script.experimental.api.*
 import kotlin.script.experimental.host.FileBasedScriptSource
@@ -99,6 +100,16 @@ internal fun getScriptKtFile(
     }
 }
 
+internal class SourceCodeImpl(file: KtFile) : SourceCode, Serializable {
+    override val text: String = file.text
+    override val name: String? = file.name
+    override val locationId: String? = file.virtualFilePath
+
+    companion object {
+        private const val serialVersionUID = 1L
+    }
+}
+
 internal fun makeCompiledScript(
     generationState: GenerationState,
     script: SourceCode,
@@ -122,7 +133,8 @@ internal fun makeCompiledScript(
             sourceDependencies.find { it.scriptFile == containingKtFile }?.sourceDependencies?.valueOrThrow()?.mapNotNull { sourceFile ->
                 sourceFile.declarations.firstIsInstanceOrNull<KtScript>()?.let {
                     KJvmCompiledScript<Any>(
-                        containingKtFile.virtualFile?.path,
+                        SourceCodeImpl(containingKtFile),
+                        containingKtFile.virtualFilePath,
                         getScriptConfiguration(sourceFile),
                         it.fqName.asString(),
                         null,
@@ -144,6 +156,7 @@ internal fun makeCompiledScript(
     }
 
     return KJvmCompiledScript(
+        script,
         script.locationId,
         getScriptConfiguration(ktScript.containingKtFile),
         ktScript.fqName.asString(),

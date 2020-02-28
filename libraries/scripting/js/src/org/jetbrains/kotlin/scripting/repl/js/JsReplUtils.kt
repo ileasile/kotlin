@@ -16,6 +16,7 @@ import kotlin.script.experimental.api.CompiledScript
 import kotlin.script.experimental.api.ResultWithDiagnostics
 import kotlin.script.experimental.api.ScriptCompilationConfiguration
 import kotlin.script.experimental.api.ScriptEvaluationConfiguration
+import kotlin.script.experimental.api.SourceCode
 
 abstract class JsState(override val lock: ReentrantReadWriteLock) : IReplStageState<ScriptDescriptor> {
     override val history: IReplStageHistory<ScriptDescriptor>
@@ -38,6 +39,7 @@ class JsEvaluationState(lock: ReentrantReadWriteLock, val engine: ScriptEngine) 
 }
 
 class JsCompiledScript(
+    override val code: SourceCode,
     val jsCode: String,
     override val compilationConfiguration: ScriptCompilationConfiguration
 ) : CompiledScript<Any> {

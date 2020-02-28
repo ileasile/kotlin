@@ -354,4 +354,6 @@ interface CompiledScript<out ScriptBase : Any> {
      */
     val resultField: Pair<String, KotlinType>?
         get() = null
+
+    val code: SourceCode
 }

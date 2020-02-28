@@ -39,7 +39,7 @@ class JsScriptCompilerWithDependenciesProxy(private val environment: KotlinCoreE
                     is ReplCompileResult.CompiledClasses -> {
                         val compileJsCode = compileResult.data as String
                         ResultWithDiagnostics.Success(
-                            JsCompiledScript(dependenciesCode + "\n" + compileJsCode, scriptCompilationConfiguration)
+                            JsCompiledScript(script,dependenciesCode + "\n" + compileJsCode, scriptCompilationConfiguration)
                         )
                     }
                     is ReplCompileResult.Incomplete -> ResultWithDiagnostics.Failure(
