@@ -6,6 +6,7 @@
 package kotlin.script.experimental.jvmhost.jsr223
 
 import org.jetbrains.kotlin.cli.common.repl.*
+import org.jetbrains.kotlin.cli.common.repl.ReplCompiler
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import javax.script.ScriptContext
 import javax.script.ScriptEngineFactory

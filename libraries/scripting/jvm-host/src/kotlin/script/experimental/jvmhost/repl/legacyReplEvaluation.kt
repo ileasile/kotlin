@@ -7,6 +7,7 @@ package kotlin.script.experimental.jvmhost.repl
 
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.cli.common.repl.*
+import org.jetbrains.kotlin.cli.common.repl.ReplEvaluator
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.write
 import kotlin.reflect.KClass

@@ -6,6 +6,7 @@
 package kotlin.script.experimental.jvmhost.repl
 
 import org.jetbrains.kotlin.cli.common.repl.*
+import org.jetbrains.kotlin.cli.common.repl.ReplCompiler
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.KJvmReplCompilerImpl
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.JvmReplCompilerState
 import org.jetbrains.kotlin.scripting.compiler.plugin.repl.KJvmReplCompilerProxy
