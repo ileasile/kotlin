@@ -7,6 +7,7 @@
 
 package org.jetbrains.kotlin.scripting.compiler.plugin.repl
 
+import org.jetbrains.kotlin.cli.common.repl.ILineId
 import org.jetbrains.kotlin.cli.common.repl.ReplCodeLine
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.cli.jvm.compiler.NoScopeRecordCliBindingTrace
@@ -32,6 +33,8 @@ import org.jetbrains.kotlin.resolve.scopes.utils.parentsWithSelf
 import org.jetbrains.kotlin.resolve.scopes.utils.replaceImportingScopes
 import org.jetbrains.kotlin.scripting.definitions.ScriptPriorities
 import kotlin.script.experimental.api.SourceCode
+import kotlin.script.experimental.jvm.util.CompiledHistoryItem
+import kotlin.script.experimental.jvm.util.CompiledHistoryList
 import kotlin.script.experimental.jvm.util.SnippetsHistory
 
 open class ReplCodeAnalyzerBase(
@@ -86,6 +89,10 @@ open class ReplCodeAnalyzerBase(
         }
     }
 
+    fun resetToLine(lineId: ILineId): List<SourceCodeByReplLine> = replState.resetToLine(lineId)
+
+    fun reset(): List<SourceCodeByReplLine> = replState.reset()
+
     fun analyzeReplLine(psiFile: KtFile, codeLine: ReplCodeLine): ReplLineAnalysisResult {
         topDownAnalysisContext.scripts.clear()
         trace.clearDiagnostics()
@@ -106,10 +113,10 @@ open class ReplCodeAnalyzerBase(
 
         psiFile.script!!.putUserData(ScriptPriorities.PRIORITY_KEY, priority)
 
-        return doAnalyze(psiFile, importedScripts, codeLine)
+        return doAnalyze(psiFile, importedScripts, codeLine.addNo(priority))
     }
 
-    private fun doAnalyze(linePsi: KtFile, importedScripts: List<KtFile>, codeLine: SourceCode): ReplLineAnalysisResult {
+    private fun doAnalyze(linePsi: KtFile, importedScripts: List<KtFile>, codeLine: SourceCodeByReplLine): ReplLineAnalysisResult {
         scriptDeclarationFactory.setDelegateFactory(
             FileBasedDeclarationProviderFactory(resolveSession.storageManager, listOf(linePsi) + importedScripts)
         )
@@ -183,14 +190,24 @@ open class ReplCodeAnalyzerBase(
         }
     }
 
-    data class CompiledCode(val className: String, val source: SourceCode)
+    data class CompiledCode(val className: String, val source: SourceCodeByReplLine)
 
     // TODO: merge with org.jetbrains.kotlin.resolve.repl.ReplState when switching to new REPL infrastructure everywhere
     // TODO: review its place in the extracted state infrastructure (now the analyzer itself is a part of the state)
     class ResettableAnalyzerState {
-        private val successfulLines =
-            SnippetsHistory<CompiledCode, LineInfo.SuccessfulLine>()
+        private val successfulLines = ResettableSnippetsHistory<LineInfo.SuccessfulLine>()
         private val submittedLines = hashMapOf<KtFile, LineInfo>()
+
+        fun resetToLine(lineId: ILineId): List<SourceCodeByReplLine> {
+            val removed = successfulLines.resetToLine(lineId)
+            removed.forEach { submittedLines.remove(it.second.linePsi) }
+            return removed.map { it.first }
+        }
+
+        fun reset(): List<SourceCodeByReplLine> {
+            submittedLines.clear()
+            return successfulLines.reset().map { it.first }
+        }
 
         fun submitLine(ktFile: KtFile) {
             val line =
@@ -206,7 +223,7 @@ open class ReplCodeAnalyzerBase(
             }
         }
 
-        fun lineSuccess(ktFile: KtFile, codeLine: SourceCode, scriptDescriptor: ClassDescriptorWithResolutionScopes) {
+        fun lineSuccess(ktFile: KtFile, codeLine: SourceCodeByReplLine, scriptDescriptor: ClassDescriptorWithResolutionScopes) {
             val successfulLine =
                 LineInfo.SuccessfulLine(
                     ktFile,
@@ -258,10 +275,33 @@ open class ReplCodeAnalyzerBase(
     }
 }
 
-fun ReplCodeLine.toSourceCode(): SourceCode = SourceCodeByReplLine(code)
+fun ReplCodeLine.toSourceCode() = SourceCodeByReplLine(code, no)
+internal fun SourceCode.addNo(no: Int) = SourceCodeByReplLine(text, no, name, locationId)
 
-internal data class SourceCodeByReplLine(
+data class SourceCodeByReplLine(
     override val text: String,
+    val no: Int,
     override val name: String? = null,
     override val locationId: String? = null
 ) : SourceCode
+
+private typealias ReplSourceHistoryList<ResultT> = List<CompiledHistoryItem<SourceCodeByReplLine, ResultT>>
+
+@Deprecated("This functionality is left for backwards compatibility only", ReplaceWith("SnippetsHistory"))
+private class ResettableSnippetsHistory<ResultT>(startingHistory: CompiledHistoryList<ReplCodeAnalyzerBase.CompiledCode, ResultT> = emptyList()) :
+    SnippetsHistory<ReplCodeAnalyzerBase.CompiledCode, ResultT>(startingHistory) {
+
+    fun resetToLine(line: ILineId): ReplSourceHistoryList<ResultT> {
+        val removed = arrayListOf<Pair<SourceCodeByReplLine, ResultT>>()
+        while ((history.lastOrNull()?.first?.source?.no ?: -1) > line.no) {
+            removed.add(history.removeAt(history.size - 1).let { Pair(it.first.source, it.second) })
+        }
+        return removed.reversed()
+    }
+
+    fun reset(): ReplSourceHistoryList<ResultT> {
+        val removed = history.map { Pair(it.first.source, it.second) }
+        history.clear()
+        return removed
+    }
+}
