@@ -27,13 +27,15 @@ data class CompilerMessageLocation private constructor(
     val lineContent: String?
 ) : Serializable {
     override fun toString(): String {
-        return if (line != -1 && line == lineEnd)
-            "($line:$column - $columnEnd)"
-        else {
-            val start = if (line != -1 || column != -1) " ($line:$column)" else ""
-            val end = if (lineEnd != -1 || columnEnd != -1) " ($lineEnd:$columnEnd)" else ""
-            path + start + if (end.isNotEmpty()) " -$end" else ""
-        }
+        val start =
+            if (line == -1 && column == -1) ""
+            else "$line:$column"
+        val end =
+            if (lineEnd == -1 && columnEnd == -1) ""
+            else if (lineEnd == line) " - $columnEnd"
+            else " - $lineEnd:$columnEnd"
+        val loc = if (start.isEmpty() && end.isEmpty()) "" else " ($start$end)"
+        return path + loc
     }
 
     companion object {
