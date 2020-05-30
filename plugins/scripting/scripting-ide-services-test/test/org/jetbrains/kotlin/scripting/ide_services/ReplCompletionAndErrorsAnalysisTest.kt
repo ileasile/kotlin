@@ -13,10 +13,12 @@ import org.jetbrains.kotlin.scripting.ide_services.test_util.simpleScriptCompila
 import org.jetbrains.kotlin.scripting.ide_services.test_util.toList
 import org.junit.Assert
 import org.junit.Test
+import java.io.Writer
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty0
 import kotlin.script.experimental.api.*
+import kotlin.system.measureTimeMillis
 
 class ReplCompletionAndErrorsAnalysisTest : TestCase() {
     @Test
@@ -45,7 +47,7 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             code = "v.mema."
             cursor = 7
             expect {
-                completions.mode(ComparisonType.INCLUDES)
+                completions.mode = ComparisonType.INCLUDES
                 addCompletion("memx", "memx", "Int", "property")
                 addCompletion("memy", "memy", "String", "property")
             }
@@ -71,7 +73,7 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             code = testCode
             cursor = testCursor ?: testCode.length
             expect {
-                completions.mode(ComparisonType.EQUALS)
+                completions.mode = ComparisonType.EQUALS
             }
         }
 
@@ -99,7 +101,7 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             cursor = 17
             code = "import java.lang."
             expect {
-                completions.mode(ComparisonType.INCLUDES)
+                completions.mode = ComparisonType.INCLUDES
                 addCompletion("Process", "Process", " (java.lang)", "class")
             }
         }
@@ -175,7 +177,7 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                 val v = BClass("KKK", AClass(5, "25"))
             """.trimIndent()
             expect {
-                errors.mode(ComparisonType.EQUALS)
+                errors.mode = ComparisonType.EQUALS
             }
         }
 
@@ -224,8 +226,87 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                 foo
             """.trimIndent()
             expect {
-                errors.mode(ComparisonType.EQUALS)
+                errors.mode = ComparisonType.EQUALS
                 resultType = "Int"
+            }
+        }
+    }
+
+    @Test
+    fun testLongRunningCompletion() = test {
+        // This test normally completes in about half a minute
+        // Log should show slow _linear_ compilation/completion time growth
+
+        val compileWriter = System.out.writer() // FileWriter("$csvDir/compilations.csv")
+        val completeWriter = System.out.writer() // FileWriter("$csvDir/completions.csv")
+
+        for (i in 1..230) {
+            run {
+                code = """
+                    val dataFrame = mapOf("x" to 45)
+                    val e = "str"
+                """.trimIndent()
+                doCompile
+
+                loggingInfo = CSVLoggingInfo(compile = CSVLoggingInfoItem(compileWriter, i, "compile;"))
+            }
+
+            run {
+                code = """
+                    val x = mapOf("a" to dataFrame., "b" to 12, e to 42)
+                """.trimIndent()
+                cursor = 31
+
+                doComplete
+                expect {
+                    completions.size = 86
+                }
+
+                loggingInfo = CSVLoggingInfo(complete = CSVLoggingInfoItem(completeWriter, i, "complete;"))
+            }
+
+        }
+    }
+
+    @Test
+    fun testImplicitExtensions() = test {
+        run {
+            code = """
+                class A {
+                    fun String.foooo() = 42
+                }
+            """.trimIndent()
+            doCompile
+        }
+        run {
+            code = """
+                with(A()) {
+                    with("bar") {
+                        foo
+                    }
+                }
+            """.trimIndent()
+            cursor = code.indexOf("foo") + 3
+            expect {
+                completions.mode = ComparisonType.EQUALS
+                addCompletion("foooo()", "foooo()", "Int", "method")
+            }
+        }
+    }
+
+    @Test
+    fun testDefaultImports() = test {
+        run {
+            compilationConfiguration = ScriptCompilationConfiguration {
+                defaultImports(listOf("kotlin.math.atan"))
+            }
+
+            code = "ata"
+            cursor = 3
+
+            expect {
+                completions.mode = ComparisonType.INCLUDES
+                addCompletion("atan(", "atan(Double)", "Double", "method")
             }
         }
     }
@@ -261,8 +342,11 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                 }
 
             var cursor: Int? = null
+            var compilationConfiguration: ScriptCompilationConfiguration? = null
             var code: String = ""
             private var _expected: Expected = Expected(this)
+
+            var loggingInfo: CSVLoggingInfo? = null
 
             fun expect(setup: (Expected).() -> Unit) {
                 _expected = Expected(this)
@@ -270,7 +354,15 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             }
 
             fun collect(): Pair<RunRequest, ExpectedResult> {
-                return RunRequest(cursor, code, _doCompile, _doComplete, _doErrorCheck) to _expected.collect()
+                return RunRequest(
+                    cursor,
+                    code,
+                    _doCompile,
+                    _doComplete,
+                    _doErrorCheck,
+                    compilationConfiguration,
+                    loggingInfo
+                ) to _expected.collect()
             }
 
             class Expected(private val run: Run) {
@@ -310,8 +402,25 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
     }
 
     enum class ComparisonType {
-        INCLUDES, EQUALS, DONT_CHECK
+        COMPARE_SIZE, INCLUDES, EQUALS, DONT_CHECK
     }
+
+    data class CSVLoggingInfoItem(
+        val writer: Writer,
+        val xValue: Int,
+        val prefix: String = "",
+    ) {
+        fun writeValue(value: Any) {
+            writer.write("$prefix$xValue;$value\n")
+            writer.flush()
+        }
+    }
+
+    data class CSVLoggingInfo(
+        val compile: CSVLoggingInfoItem? = null,
+        val complete: CSVLoggingInfoItem? = null,
+        val analyze: CSVLoggingInfoItem? = null,
+    )
 
     data class RunRequest(
         val cursor: Int?,
@@ -319,20 +428,25 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
         val doCompile: Boolean,
         val doComplete: Boolean,
         val doErrorCheck: Boolean,
+        val compilationConfiguration: ScriptCompilationConfiguration?,
+        val loggingInfo: CSVLoggingInfo?,
     )
 
-    class ExpectedList<T>(private val runProperty: KProperty0<Unit>) {
+    class ExpectedList<T>(private val runProperty: KProperty0<Unit>) : ExpectedOptions {
         val list = mutableListOf<T>()
 
-        private var _compMode = ComparisonType.DONT_CHECK
-        fun mode() = _compMode
-        fun mode(mode: ComparisonType) {
-            _compMode = mode
-        }
+        override var mode = ComparisonType.DONT_CHECK
+        override var size = 0
+            set(value) {
+                if (mode == ComparisonType.DONT_CHECK)
+                    mode = ComparisonType.COMPARE_SIZE
+                runProperty.get()
+                field = value
+            }
 
         fun add(elem: T) {
-            if (_compMode == ComparisonType.DONT_CHECK)
-                _compMode = ComparisonType.EQUALS
+            if (mode == ComparisonType.DONT_CHECK)
+                mode = ComparisonType.EQUALS
             runProperty.get()
             list.add(elem)
         }
@@ -360,6 +474,11 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
         val resultType: String?,
     )
 
+    interface ExpectedOptions {
+        val mode: ComparisonType
+        val size: Int
+    }
+
     private val currentLineCounter = AtomicInteger()
 
     private fun nextCodeLine(code: String): SourceCode =
@@ -373,37 +492,58 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
         snippets: List<RunRequest>
     ): List<ResultWithDiagnostics<ActualResult>> {
         val compiler = KJvmReplCompilerWithIdeServices()
-        return snippets.map { (cursor, snippetText, doCompile, doComplete, doErrorCheck) ->
-            val pos = SourceCode.Position(0, 0, cursor)
-            val codeLine = nextCodeLine(snippetText)
-            val completionRes = if (doComplete && cursor != null) {
-                val res = compiler.complete(codeLine, pos, compilationConfiguration)
-                res.toList().filter { it.tail != "keyword" }
-            } else {
-                emptyList()
+        return snippets.mapIndexed { index, runRequest ->
+            with(runRequest) {
+                val newCompilationConfiguration = this.compilationConfiguration?.let {
+                    ScriptCompilationConfiguration(compilationConfiguration, it)
+                } ?: compilationConfiguration
+
+                val pos = SourceCode.Position(0, 0, cursor)
+                val codeLine = nextCodeLine(code)
+                val completionRes = if (doComplete && cursor != null) {
+                    var res: ResultWithDiagnostics<ReplCompletionResult>?
+                    val timeMillis = measureTimeMillis { res = compiler.complete(codeLine, pos, newCompilationConfiguration) }
+
+                    loggingInfo?.complete?.writeValue(timeMillis)
+
+                    res!!.toList().filter { it.tail != "keyword" }
+                } else {
+                    emptyList()
+                }
+
+                val analysisResult = if (doErrorCheck) {
+                    val codeLineForErrorCheck = nextCodeLine(code)
+
+                    var res: ReplAnalyzerResult?
+                    val timeMillis = measureTimeMillis {
+                        res = compiler.analyze(codeLineForErrorCheck, SourceCode.Position(0, 0), newCompilationConfiguration).valueOrNull()
+                    }
+
+                    loggingInfo?.analyze?.writeValue(timeMillis)
+
+                    res
+                } else {
+                    null
+                } ?: ReplAnalyzerResult()
+
+                val errorsSequence = analysisResult[ReplAnalyzerResult.analysisDiagnostics]!!
+                val resultType = analysisResult[ReplAnalyzerResult.renderedResultType]
+
+                if (doCompile) {
+                    val codeLineForCompilation = nextCodeLine(code)
+
+                    val timeMillis = measureTimeMillis { compiler.compile(codeLineForCompilation, newCompilationConfiguration) }
+
+                    loggingInfo?.compile?.writeValue(timeMillis)
+                }
+
+                ActualResult(completionRes, errorsSequence.toList(), resultType).asSuccess()
             }
-
-            val analysisResult = if (doErrorCheck) {
-                val codeLineForErrorCheck = nextCodeLine(snippetText)
-                compiler.analyze(codeLineForErrorCheck, SourceCode.Position(0, 0), compilationConfiguration).valueOrNull()
-            } else {
-                null
-            }?: ReplAnalyzerResult()
-
-            val errorsSequence = analysisResult[ReplAnalyzerResult.analysisDiagnostics]!!
-            val resultType = analysisResult[ReplAnalyzerResult.renderedResultType]
-
-            if (doCompile) {
-                val codeLineForCompilation = nextCodeLine(snippetText)
-                compiler.compile(codeLineForCompilation, compilationConfiguration)
-            }
-
-            ActualResult(completionRes, errorsSequence.toList(), resultType).asSuccess()
         }
     }
 
-    private fun <T> checkLists(index: Int, checkName: String, expected: List<T>, actual: List<T>, compType: ComparisonType) {
-        when (compType) {
+    private fun <T> checkLists(index: Int, checkName: String, expected: List<T>, actual: List<T>, options: ExpectedOptions) {
+        when (options.mode) {
             ComparisonType.EQUALS -> Assert.assertEquals(
                 "#$index ($checkName): Expected $expected, got $actual",
                 expected,
@@ -412,6 +552,11 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
             ComparisonType.INCLUDES -> Assert.assertTrue(
                 "#$index ($checkName): Expected $actual to include $expected",
                 actual.containsAll(expected)
+            )
+            ComparisonType.COMPARE_SIZE -> Assert.assertEquals(
+                "#$index ($checkName): Expected list size to be equal to ${options.size}, but was ${actual.size}",
+                options.size,
+                actual.size
             )
             ComparisonType.DONT_CHECK -> {
             }
@@ -431,11 +576,11 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                     val (expectedCompletions, expectedErrors, expectedResultType) = expectedIter.next()
                     val (completionsRes, errorsRes, resultType) = res.value
 
-                    checkLists(index, "completions", expectedCompletions.list, completionsRes, expectedCompletions.mode())
+                    checkLists(index, "completions", expectedCompletions.list, completionsRes, expectedCompletions)
                     val expectedErrorsWithPath = expectedErrors.list.map {
                         it.copy(sourcePath = errorsRes.firstOrNull()?.sourcePath)
                     }
-                    checkLists(index, "errors", expectedErrorsWithPath, errorsRes, expectedErrors.mode())
+                    checkLists(index, "errors", expectedErrorsWithPath, errorsRes, expectedErrors)
                     assertEquals("Analysis result types are different", expectedResultType, resultType)
                 }
             }
