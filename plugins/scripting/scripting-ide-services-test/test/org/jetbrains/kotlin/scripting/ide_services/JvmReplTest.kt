@@ -86,6 +86,8 @@ class JvmIdeServicesTest : TestCase() {
                     } else {
                         assertEquals(3, loc.line)
                         assertEquals(11, loc.column)
+                        assertEquals(3, loc.lineEnd)
+                        assertEquals(14, loc.columnEnd)
                     }
                 } else {
                     fail("Result should be an error")
@@ -115,6 +117,8 @@ class JvmIdeServicesTest : TestCase() {
                     } else {
                         assertEquals(3, loc.line)
                         assertEquals(13, loc.column)
+                        assertEquals(3, loc.lineEnd)
+                        assertEquals(16, loc.columnEnd)
                     }
                 } else {
                     fail("Result should be an error")
@@ -394,6 +398,8 @@ private fun <T> ResultWithDiagnostics<T>.getErrors(): CompilationErrors =
                     report.sourcePath,
                     loc.start.line,
                     loc.start.col,
+                    loc.end?.line,
+                    loc.end?.col,
                     null
                 )?.toString()?.let {
                     "$it "
@@ -412,6 +418,8 @@ private fun <T> ResultWithDiagnostics<T>.getErrors(): CompilationErrors =
                 it.sourcePath,
                 loc.start.line,
                 loc.start.col,
+                loc.end?.line,
+                loc.end?.col,
                 null
             )
         }
