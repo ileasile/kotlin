@@ -19,6 +19,8 @@ class ScriptExtraImportsProviderExtension : ExtraImportsProviderExtension {
     // and allow easier extension
     private class ScriptExtraImportImpl(private val importPath: ImportPath) : KtImportInfo {
         override val isAllUnder: Boolean get() = importPath.isAllUnder
+        override val isDefault: Boolean
+            get() = false
 
         override val importContent = KtImportInfo.ImportContent.FqNameBased(importPath.fqName)
 

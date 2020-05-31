@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.resolve.lazy.*
 import org.jetbrains.kotlin.resolve.lazy.data.KtClassLikeInfo
 import org.jetbrains.kotlin.resolve.lazy.declarations.*
 import org.jetbrains.kotlin.resolve.scopes.ImportingScope
+import org.jetbrains.kotlin.resolve.scopes.utils.chainImportingScopesUnsafeFiltered
 import org.jetbrains.kotlin.resolve.scopes.utils.parentsWithSelf
 import org.jetbrains.kotlin.resolve.scopes.utils.replaceImportingScopes
 import org.jetbrains.kotlin.scripting.definitions.ScriptPriorities
@@ -272,12 +273,26 @@ open class ReplCodeAnalyzerBase(
             val lexicalScopeAfterLastLine = lineInfo.parentLine?.lineDescriptor?.scopeForInitializerResolution ?: return null
             val lastLineImports = lexicalScopeAfterLastLine.parentsWithSelf.first { it is ImportingScope } as ImportingScope
             val scopesForThisLine = fileScopeFactory.createScopesForFile(linePsi, lastLineImports)
+
+            val combinedImportingScope = scopesForThisLine.importingScope
+
+            var filteredOutCount = 0
+            val filteredImportingScope = chainImportingScopesUnsafeFiltered(
+                combinedImportingScope
+            ) {
+                if (it.isDefault && filteredOutCount < 3) {
+                    filteredOutCount++
+                    false
+                } else
+                    true
+            }
+
             val combinedLexicalScopes = if (hasImports)
-                lexicalScopeAfterLastLine.replaceImportingScopes(scopesForThisLine.importingScope)
+                lexicalScopeAfterLastLine.replaceImportingScopes(filteredImportingScope)
             else
                 lexicalScopeAfterLastLine
 
-            return FileScopes(combinedLexicalScopes, scopesForThisLine.importingScope, scopesForThisLine.importForceResolver)
+            return FileScopes(combinedLexicalScopes, filteredImportingScope ?: ImportingScope.Empty, scopesForThisLine.importForceResolver)
         }
     }
 }

@@ -8,9 +8,8 @@ package org.jetbrains.kotlin.scripting.ide_services
 import junit.framework.TestCase
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.scripting.ide_services.compiler.KJvmReplCompilerWithIdeServices
+import org.jetbrains.kotlin.scripting.ide_services.test_util.*
 import org.jetbrains.kotlin.scripting.ide_services.test_util.SourceCodeTestImpl
-import org.jetbrains.kotlin.scripting.ide_services.test_util.simpleScriptCompilationConfiguration
-import org.jetbrains.kotlin.scripting.ide_services.test_util.toList
 import org.junit.Assert
 import org.junit.Test
 import java.io.Writer
@@ -269,6 +268,27 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
     }
 
     @Test
+    fun testLongCompilationsWithImport() = test {
+        // This test normally completes in about half a minute
+        // Log should show slow _linear_ compilation/completion time growth
+
+        val compileWriter = System.out.writer() // FileWriter("$csvDir/compilations.csv")
+
+        for (i in 1..120) {
+            run {
+                code = """
+                    import kotlin.math.*
+                    val dataFrame = mapOf("x" to sin(3.0))
+                    val e = "str"
+                """.trimIndent()
+                doCompile
+
+                loggingInfo = CSVLoggingInfo(compile = CSVLoggingInfoItem(compileWriter, i, "compile;"))
+            }
+        }
+    }
+
+    @Test
     fun testImplicitExtensions() = test {
         run {
             code = """
@@ -493,7 +513,7 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
         snippets: List<RunRequest>
     ): List<ResultWithDiagnostics<ActualResult>> {
         val compiler = KJvmReplCompilerWithIdeServices()
-        return snippets.mapIndexed { index, runRequest ->
+        return snippets.map { runRequest ->
             with(runRequest) {
                 val newCompilationConfiguration = this.compilationConfiguration?.let {
                     ScriptCompilationConfiguration(compilationConfiguration, it)

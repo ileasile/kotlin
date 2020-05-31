@@ -108,6 +108,8 @@ enum class LexicalScopeKind(val withLocalDescriptors: Boolean) {
 
 interface ImportingScope : HierarchicalScope {
     override val parent: ImportingScope?
+    val isDefault: Boolean
+        get() = false
 
     fun getContributedPackage(name: Name): PackageViewDescriptor?
 

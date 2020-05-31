@@ -243,11 +243,26 @@ fun LexicalScope.addImportingScopes(importScopes: List<ImportingScope>): Lexical
 
 fun LexicalScope.addImportingScope(importScope: ImportingScope): LexicalScope = addImportingScopes(listOf(importScope))
 
-fun ImportingScope.withParent(newParent: ImportingScope?): ImportingScope {
-    return object : ImportingScope by this {
-        override val parent: ImportingScope?
-            get() = newParent
+private class ImportingScopeWrapper(val delegate: ImportingScope, private val newParent: ImportingScope?) : ImportingScope by delegate{
+    override val parent: ImportingScope?
+        get() = newParent
+
+    override fun toString(): String {
+        return delegate.toString()
     }
+}
+
+fun ImportingScope.withParent(newParent: ImportingScope?): ImportingScope {
+    val wrappedScope = if (this is ImportingScopeWrapper) {
+        this.delegate
+    } else {
+        this
+    }
+
+    if (wrappedScope.parent == newParent)
+        return wrappedScope
+
+    return ImportingScopeWrapper(wrappedScope, newParent)
 }
 
 fun LexicalScope.replaceImportingScopes(importingScopeChain: ImportingScope?): LexicalScope {
@@ -288,6 +303,27 @@ private class LexicalScopeWrapper(
     }
 
     override fun toString() = kind.toString()
+}
+
+fun chainImportingScopesUnsafeFiltered(
+    scope: ImportingScope,
+    filter: (ImportingScope) -> Boolean = { true },
+): ImportingScope? {
+    val scopeParent = scope.parent
+    val filterResult = filter(scope)
+
+    return if (scopeParent == null) {
+        if (filterResult)
+            scope
+        else
+            null
+    } else {
+        val tail = chainImportingScopesUnsafeFiltered(scopeParent, filter)
+        if (filterResult)
+            scope.withParent(tail)
+        else
+            tail
+    }
 }
 
 fun chainImportingScopes(scopes: List<ImportingScope>, tail: ImportingScope? = null): ImportingScope? {

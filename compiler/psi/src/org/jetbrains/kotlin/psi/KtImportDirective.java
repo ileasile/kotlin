@@ -180,4 +180,9 @@ public class KtImportDirective extends KtElementImplStub<KotlinImportDirectiveSt
             throw new IllegalArgumentException("Can't construct name for: " + expression.getClass().toString());
         }
     }
+
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
 }

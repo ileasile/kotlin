@@ -222,6 +222,9 @@ class LazyImportScope(
         INVISIBLE_CLASSES
     }
 
+    override val isDefault: Boolean
+        get() = importResolver.indexedImports.imports.firstOrNull()?.isDefault ?: false
+
     private fun LazyImportResolver<*>.isClassifierVisible(descriptor: ClassifierDescriptor): Boolean {
         if (filteringKind == FilteringKind.ALL) return true
 

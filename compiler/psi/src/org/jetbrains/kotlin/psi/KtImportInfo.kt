@@ -15,6 +15,7 @@ interface KtImportInfo {
     }
 
     val isAllUnder: Boolean
+    val isDefault: Boolean
     val importContent: ImportContent?
     val importedFqName: FqName?
     val aliasName: String?
