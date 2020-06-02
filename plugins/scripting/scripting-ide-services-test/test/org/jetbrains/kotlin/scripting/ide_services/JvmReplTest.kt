@@ -6,8 +6,11 @@
 package org.jetbrains.kotlin.scripting.ide_services
 
 import junit.framework.TestCase
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageExtendedLocation
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageLocation
 import org.jetbrains.kotlin.scripting.ide_services.test_util.*
+import org.jetbrains.kotlin.cli.common.messages.column
+import org.jetbrains.kotlin.cli.common.messages.line
 import org.jetbrains.kotlin.scripting.ide_services.test_util.JvmTestRepl
 import org.jetbrains.kotlin.scripting.ide_services.test_util.SourceCodeTestImpl
 import java.io.File
@@ -90,6 +93,8 @@ class JvmIdeServicesTest : TestCase() {
                     } else {
                         assertEquals(3, loc.line)
                         assertEquals(11, loc.column)
+                        assertEquals(3, loc.lineEnd)
+                        assertEquals(14, loc.columnEnd)
                     }
                 } else {
                     fail("Result should be an error")
@@ -119,6 +124,8 @@ class JvmIdeServicesTest : TestCase() {
                     } else {
                         assertEquals(3, loc.line)
                         assertEquals(13, loc.column)
+                        assertEquals(3, loc.lineEnd)
+                        assertEquals(16, loc.columnEnd)
                     }
                 } else {
                     fail("Result should be an error")
@@ -425,18 +432,22 @@ private fun checkCompile(repl: JvmTestRepl, line: String): LinkedSnippet<KJvmCom
 
 private data class CompilationErrors(
     val message: String,
-    val location: CompilerMessageLocation?
+    val location: CompilerMessageExtendedLocation?
 )
 
 private fun <T> ResultWithDiagnostics<T>.getErrors(): CompilationErrors =
     CompilationErrors(
         reports.joinToString("\n") { report ->
             report.location?.let { loc ->
-                CompilerMessageLocation.create(
-                    report.sourcePath,
-                    loc.start.line,
-                    loc.start.col,
-                    null
+                CompilerMessageExtendedLocation.create(
+                    CompilerMessageLocation.create(
+                        report.sourcePath,
+                        loc.start.line,
+                        loc.start.col,
+                        null
+                    ),
+                    loc.end?.line,
+                    loc.end?.col,
                 )?.toString()?.let {
                     "$it "
                 }
@@ -450,11 +461,15 @@ private fun <T> ResultWithDiagnostics<T>.getErrors(): CompilationErrors =
             }
         }?.let {
             val loc = it.location ?: return@let null
-            CompilerMessageLocation.create(
-                it.sourcePath,
-                loc.start.line,
-                loc.start.col,
-                null
+            CompilerMessageExtendedLocation.create(
+                CompilerMessageLocation.create(
+                    it.sourcePath,
+                    loc.start.line,
+                    loc.start.col,
+                    null
+                ),
+                loc.end?.line,
+                loc.end?.col,
             )
         }
     )

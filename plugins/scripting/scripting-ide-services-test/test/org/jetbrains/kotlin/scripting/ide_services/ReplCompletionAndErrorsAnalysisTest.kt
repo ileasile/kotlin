@@ -188,10 +188,10 @@ class ReplCompletionAndErrorsAnalysisTest : TestCase() {
                 val c = foob
             """.trimIndent()
             expect {
-                addError(1, 16, "Type mismatch: inferred type is String but Int was expected", "ERROR")
-                addError(1, 22, "The floating-point literal does not conform to the expected type String", "ERROR")
-                addError(2, 14, "Type mismatch: inferred type is String but Int was expected", "ERROR")
-                addError(3, 9, "Unresolved reference: foob", "ERROR")
+                addError(1, 16, 1, 20, "Type mismatch: inferred type is String but Int was expected", "ERROR")
+                addError(1, 22, 1, 26, "The floating-point literal does not conform to the expected type String", "ERROR")
+                addError(2, 14, 2, 19, "Type mismatch: inferred type is String but Int was expected", "ERROR")
+                addError(3, 9, 3, 13, "Unresolved reference: foob", "ERROR")
             }
         }
     }

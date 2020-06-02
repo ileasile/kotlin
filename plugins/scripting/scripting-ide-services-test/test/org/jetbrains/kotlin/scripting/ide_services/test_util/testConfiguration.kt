@@ -77,14 +77,15 @@ class TestConf {
             }
 
             val errors = ExpectedList<ScriptDiagnostic>(run::doErrorCheck)
-            fun addError(startLine: Int, startCol: Int, message: String, severity: String) {
+            fun addError(startLine: Int, startCol: Int, endLine: Int, endCol: Int, message: String, severity: String) {
                 errors.add(
                     ScriptDiagnostic(
                         ScriptDiagnostic.unspecifiedError,
                         message,
                         ScriptDiagnostic.Severity.valueOf(severity),
                         location = SourceCode.Location(
-                            SourceCode.Position(startLine, startCol)
+                            SourceCode.Position(startLine, startCol),
+                            SourceCode.Position(endLine, endCol)
                         )
                     )
                 )
